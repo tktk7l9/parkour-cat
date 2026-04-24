@@ -322,8 +322,8 @@
 <div id="startOverlay">
   <div class="card">
     <h1>🐈 パルクール猫</h1>
-    <div class="sub">PARKOUR · CAT · WEBGL</div>
-    <p>屋根から屋根へ、木から塀へ。街と森を舞台にしたアクロバット・パルクール。<br>
+    <div class="sub">PARKOUR · CAT · WEBGL &nbsp;<span style="background:rgba(255,255,255,0.12);border:1px solid rgba(255,255,255,0.25);border-radius:5px;padding:1px 8px;font-size:11px;color:#b8c8d8;letter-spacing:0.06em">v2.0</span></div>
+    <p>ロンドンの街を舞台に、アクロバット猫が縦横無尽に駆け抜ける。<br>
       宙返りを決めて、魚を食べ、小さなネズミを追いかけよう。</p>
     <div class="controls-grid">
       <kbd>WASD</kbd><span>移動 — Wで画面奥へ正しく前進</span>
@@ -338,7 +338,7 @@
       <kbd>X / Z</kbd><span>二回宙 / ゲイナー</span>
       <kbd>C / Q</kbd><span>受け身 / プレシジョン180°</span>
     </div>
-    <p style="font-size:11px;color:#8a8575;margin-bottom:4px">止まっていると猫がかわいい動作をします 🐾</p>
+    <p style="font-size:11px;color:#8a8575;margin-bottom:4px">止まっていると猫がかわいい動作をします 🐾 耳かき・あくび・威嚇・仰向けなど14種</p>
     <button id="startBtn">はじめる</button>
   </div>
 </div>
@@ -369,17 +369,17 @@ renderer.toneMappingExposure = 1.1;
 app.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.fog = new THREE.Fog(0xc7d7e6, 90, 280);
+scene.fog = new THREE.Fog(0x8fa4b4, 65, 200);
 
-/* Sky */
+/* Sky — London overcast */
 {
   const skyGeo = new THREE.SphereGeometry(400, 32, 16);
   const skyMat = new THREE.ShaderMaterial({
     side: THREE.BackSide,
     uniforms: {
-      topColor: { value: new THREE.Color('#6cabe0') },
-      midColor: { value: new THREE.Color('#bfd9ec') },
-      bottomColor: { value: new THREE.Color('#ffd2a0') },
+      topColor:    { value: new THREE.Color('#3e4e5e') },
+      midColor:    { value: new THREE.Color('#7a95a8') },
+      bottomColor: { value: new THREE.Color('#b8ccd8') },
     },
     vertexShader: `varying vec3 vWorldPosition;
       void main() {
@@ -392,20 +392,20 @@ scene.fog = new THREE.Fog(0xc7d7e6, 90, 280);
       void main() {
         float h = normalize(vWorldPosition).y;
         vec3 col;
-        if (h > 0.0) col = mix(midColor, topColor, pow(h, 0.8));
-        else col = mix(midColor, bottomColor, pow(-h, 0.5));
+        if (h > 0.0) col = mix(midColor, topColor, pow(h, 0.6));
+        else col = mix(midColor, bottomColor, pow(-h, 0.4));
         gl_FragColor = vec4(col, 1.0);
       }`
   });
   scene.add(new THREE.Mesh(skyGeo, skyMat));
 }
 
-/* Lights */
-const hemi = new THREE.HemisphereLight(0xbad9ff, 0x6b5a45, 0.55);
+/* Lights — overcast London diffuse */
+const hemi = new THREE.HemisphereLight(0xc8d8e8, 0x2a3340, 0.8);
 scene.add(hemi);
 
-const sun = new THREE.DirectionalLight(0xfff0d6, 1.4);
-sun.position.set(60, 90, 40);
+const sun = new THREE.DirectionalLight(0xd8e8f4, 1.1);
+sun.position.set(40, 80, 30);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
 const SHADOW_S = 90;
@@ -430,22 +430,11 @@ scene.add(WORLD);
 const SOLIDS = []; // {min, max} AABBs
 const TREES  = []; // {pos, radius, height}
 
-/* Grassy ground with subtle color variation */
+/* London ground — gray urban plane */
 {
-  const groundGeo = new THREE.PlaneGeometry(500, 500, 80, 80);
-  const pos = groundGeo.attributes.position;
-  // Subtle terrain noise outside plaza
-  for (let i = 0; i < pos.count; i++) {
-    const x = pos.getX(i), y = pos.getY(i);
-    const dist = Math.hypot(x, y);
-    if (dist > 60) {
-      const n = (Math.sin(x * 0.07) + Math.cos(y * 0.09) + Math.sin((x + y) * 0.05)) * 0.5;
-      pos.setZ(i, n * (dist - 60) * 0.04);
-    }
-  }
-  groundGeo.computeVertexNormals();
+  const groundGeo = new THREE.PlaneGeometry(500, 500, 60, 60);
   const groundMat = new THREE.MeshStandardMaterial({
-    color: 0x5e8c4a, roughness: 1.0, metalness: 0, flatShading: true
+    color: 0x5a6570, roughness: 0.98, metalness: 0, flatShading: true
   });
   const g = new THREE.Mesh(groundGeo, groundMat);
   g.rotation.x = -Math.PI / 2;
@@ -453,68 +442,82 @@ const TREES  = []; // {pos, radius, height}
   WORLD.add(g);
 }
 
-/* Grass tufts (scattered instanced-looking) */
+/* Hyde Park — small green square */
 {
-  const tuftMat = new THREE.MeshStandardMaterial({ color: 0x6fa350, roughness: 1, flatShading: true, side: THREE.DoubleSide });
-  const tuftGeo = new THREE.ConeGeometry(0.12, 0.5, 4, 1, true);
-  const inst = new THREE.InstancedMesh(tuftGeo, tuftMat, 600);
-  const m = new THREE.Matrix4();
-  const q = new THREE.Quaternion();
-  const eu = new THREE.Euler();
-  const p = new THREE.Vector3();
-  const sV = new THREE.Vector3();
-  let count = 0;
-  for (let i = 0; i < 600; i++) {
-    const a = Math.random() * Math.PI * 2;
-    const r = 15 + Math.random() * 120;
-    p.set(Math.cos(a) * r, 0.25, Math.sin(a) * r);
-    if (Math.abs(p.x) < 12 && Math.abs(p.z) < 90) continue; // avoid plaza
-    eu.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.3);
-    q.setFromEuler(eu);
-    const sc = 0.7 + Math.random() * 0.8;
-    sV.set(sc, sc, sc);
-    m.compose(p, q, sV);
-    inst.setMatrixAt(count++, m);
+  const parkMat = new THREE.MeshStandardMaterial({ color: 0x4a7040, roughness: 0.95 });
+  const park = new THREE.Mesh(new THREE.BoxGeometry(28, 0.18, 28), parkMat);
+  park.position.set(-60, 0.09, 20);
+  park.receiveShadow = true;
+  WORLD.add(park);
+  // Park trees
+  for (let i = 0; i < 6; i++) {
+    const tx = -60 + (Math.random() - 0.5) * 22;
+    const tz = 20 + (Math.random() - 0.5) * 22;
+    const th = 6 + Math.random() * 4;
+    const trunk = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.18, 0.25, th * 0.5, 6),
+      new THREE.MeshStandardMaterial({ color: 0x4a3020, roughness: 0.9 })
+    );
+    trunk.position.set(tx, th * 0.25, tz);
+    trunk.castShadow = true;
+    WORLD.add(trunk);
+    const crown = new THREE.Mesh(
+      new THREE.SphereGeometry(2.2 + Math.random(), 7, 5),
+      new THREE.MeshStandardMaterial({ color: 0x3a6030, roughness: 0.9, flatShading: true })
+    );
+    crown.position.set(tx, th * 0.5 + 1.8, tz);
+    crown.castShadow = true;
+    WORLD.add(crown);
   }
-  inst.count = count;
-  inst.instanceMatrix.needsUpdate = true;
-  WORLD.add(inst);
 }
 
-/* Plaza / street slab */
+/* London Road — gray tarmac with road markings */
 {
-  const slab = new THREE.Mesh(
-    new THREE.BoxGeometry(80, 0.2, 200),
-    new THREE.MeshStandardMaterial({ color: 0xa69d8c, roughness: 0.95 })
-  );
+  const roadMat  = new THREE.MeshStandardMaterial({ color: 0x3e4a52, roughness: 0.95 });
+  const slab = new THREE.Mesh(new THREE.BoxGeometry(80, 0.22, 200), roadMat);
   slab.position.set(0, 0.11, 0);
   slab.receiveShadow = true;
   WORLD.add(slab);
   SOLIDS.push({ min: new THREE.Vector3(-40, 0, -100), max: new THREE.Vector3(40, 0.21, 100) });
-  // cobble pattern via dark grid
-  for (let z = -100; z <= 100; z += 4) {
-    const line = new THREE.Mesh(
-      new THREE.BoxGeometry(80, 0.01, 0.08),
-      new THREE.MeshStandardMaterial({ color: 0x6d6657, roughness: 0.95 })
-    );
-    line.position.set(0, 0.22, z);
+
+  // Pavement / sidewalk strips each side
+  const paveMat = new THREE.MeshStandardMaterial({ color: 0x7a8590, roughness: 0.92 });
+  [-28, 28].forEach(sx => {
+    const pave = new THREE.Mesh(new THREE.BoxGeometry(12, 0.28, 200), paveMat);
+    pave.position.set(sx, 0.14, 0);
+    pave.receiveShadow = true;
+    WORLD.add(pave);
+  });
+
+  // Pavement grid lines (stone slabs)
+  const slabLineMat = new THREE.MeshStandardMaterial({ color: 0x6a7880, roughness: 0.95 });
+  for (let z = -100; z <= 100; z += 2.4) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(80, 0.01, 0.06), slabLineMat);
+    line.position.set(0, 0.29, z);
     WORLD.add(line);
   }
-  for (let x = -40; x <= 40; x += 4) {
-    const line = new THREE.Mesh(
-      new THREE.BoxGeometry(0.08, 0.01, 200),
-      new THREE.MeshStandardMaterial({ color: 0x6d6657, roughness: 0.95 })
-    );
-    line.position.set(x, 0.22, 0);
-    WORLD.add(line);
+
+  // London yellow double lines (no-parking)
+  const yellowMat = new THREE.MeshStandardMaterial({ color: 0xe8c830, roughness: 0.7 });
+  [-20, -19.4, 20, 20.6].forEach(lx => {
+    const yl = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.01, 200), yellowMat);
+    yl.position.set(lx, 0.23, 0);
+    WORLD.add(yl);
+  });
+
+  // White centre dashes
+  const whiteMat2 = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.65 });
+  for (let z = -90; z <= 90; z += 10) {
+    const dash = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.01, 4.5), whiteMat2);
+    dash.position.set(0, 0.23, z);
+    WORLD.add(dash);
   }
-  // center lane stripes
-  for (let z = -90; z <= 90; z += 12) {
-    const stripe = new THREE.Mesh(
-      new THREE.BoxGeometry(0.6, 0.03, 4),
-      new THREE.MeshStandardMaterial({ color: 0xf2e8c8, roughness: 0.6 })
-    );
-    stripe.position.set(0, 0.23, z);
+
+  // Zebra crossing
+  const zebraMat = new THREE.MeshStandardMaterial({ color: 0xf2f2f2, roughness: 0.7 });
+  for (let i = 0; i < 6; i++) {
+    const stripe = new THREE.Mesh(new THREE.BoxGeometry(38, 0.01, 0.55), zebraMat);
+    stripe.position.set(0, 0.23, -50 + i * 1.2);
     WORLD.add(stripe);
   }
 }
@@ -525,125 +528,267 @@ function addBoxSolidFromMesh(mesh) {
   SOLIDS.push({ min: b.min.clone(), max: b.max.clone() });
 }
 
-/* Buildings */
+/* Victorian / Georgian building */
 function makeBuilding(x, z, w, d, h, palette) {
   const g = new THREE.Group();
-  const bodyMat = new THREE.MeshStandardMaterial({ color: palette.body, roughness: 0.9 });
-  const trimMat = new THREE.MeshStandardMaterial({ color: palette.trim, roughness: 0.75 });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), bodyMat);
-  body.position.y = h / 2;
-  body.castShadow = true; body.receiveShadow = true;
-  g.add(body);
+  // Main brick body
+  const brickMat = new THREE.MeshStandardMaterial({ color: palette.body, roughness: 0.92 });
+  const stoneMat = new THREE.MeshStandardMaterial({ color: palette.stone, roughness: 0.8 });
 
-  // Window rows — polygonOffset + thicker geometry prevents z-fighting
+  const brickBody = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), brickMat);
+  brickBody.position.y = h / 2;
+  brickBody.castShadow = true; brickBody.receiveShadow = true;
+  g.add(brickBody);
+
+  // Horizontal brick course lines (subtle)
+  const courseMat = new THREE.MeshStandardMaterial({
+    color: palette.mortar, roughness: 0.95,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -2
+  });
+  for (let cy = 1.0; cy < h - 0.5; cy += 0.28) {
+    for (let side = 0; side < 4; side++) {
+      const isX = side % 2 === 0;
+      const cl = new THREE.Mesh(new THREE.BoxGeometry(isX ? w + 0.02 : 0.04, 0.04, isX ? 0.04 : d + 0.02), courseMat);
+      let cpx = 0, cpz = 0;
+      if (side === 0) cpz =  d/2;
+      if (side === 1) cpx =  w/2;
+      if (side === 2) cpz = -d/2;
+      if (side === 3) cpx = -w/2;
+      cl.position.set(cpx, cy, cpz);
+      g.add(cl);
+    }
+  }
+
+  // Stone cornice (Georgian style — thick ledge near top)
+  const cornice = new THREE.Mesh(new THREE.BoxGeometry(w + 0.6, 0.45, d + 0.6), stoneMat);
+  cornice.position.y = h - 0.5;
+  cornice.castShadow = true; cornice.receiveShadow = true;
+  g.add(cornice);
+
+  // Parapet / roof edge
+  const parapet = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 0.6, d + 0.4), stoneMat);
+  parapet.position.y = h + 0.3;
+  parapet.castShadow = true; parapet.receiveShadow = true;
+  g.add(parapet);
+
+  // Sash windows (Victorian style — 6-over-6 panes)
   const winMat = new THREE.MeshStandardMaterial({
-    color: 0x1b2736, emissive: 0x2c3e55, emissiveIntensity: 0.15,
-    roughness: 0.25, metalness: 0.5,
+    color: 0x1a2a38, emissive: 0x253545, emissiveIntensity: 0.3,
+    roughness: 0.15, metalness: 0.6,
     polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6
   });
-  const frameMat = new THREE.MeshStandardMaterial({
-    color: palette.trim, roughness: 0.8,
-    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -3
+  const winFrameMat = new THREE.MeshStandardMaterial({
+    color: 0xf0ede8, roughness: 0.75,
+    polygonOffset: true, polygonOffsetFactor: -1.5, polygonOffsetUnits: -4
   });
+  // Window arched top (fanlight-style)
+  const archMat = new THREE.MeshStandardMaterial({
+    color: palette.stone, roughness: 0.8,
+    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -5
+  });
+
   for (let side = 0; side < 4; side++) {
     const isX = side % 2 === 0;
     const sideW = isX ? w : d;
-    const cCount = Math.max(1, Math.floor(sideW / 1.7));
-    const rCount = Math.max(1, Math.floor((h - 1) / 1.9));
+    const cCount = Math.max(1, Math.floor(sideW / 2.0));
+    const rCount = Math.max(1, Math.floor((h - 1.5) / 2.2));
     for (let c = 0; c < cCount; c++) {
       for (let r = 0; r < rCount; r++) {
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.16), frameMat);
-        const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.12), winMat);
         const u = (c + 0.5) / cCount - 0.5;
-        const wy = 1.3 + r * 1.9;
-        let px, pz, ry = 0;
-        if (side === 0) { px = u * w; pz =  d/2 + 0.10; }
-        if (side === 1) { px =  w/2 + 0.10; pz = u * d; ry = Math.PI/2; }
-        if (side === 2) { px = u * w; pz = -d/2 - 0.10; }
-        if (side === 3) { px = -w/2 - 0.10; pz = u * d; ry = Math.PI/2; }
+        const wy = 1.6 + r * 2.2;
+        let px = 0, pz = 0, ry = 0;
+        if (side === 0) { px = u * w; pz =  d/2 + 0.12; }
+        if (side === 1) { px =  w/2 + 0.12; pz = u * d; ry = Math.PI/2; }
+        if (side === 2) { px = u * w; pz = -d/2 - 0.12; }
+        if (side === 3) { px = -w/2 - 0.12; pz = u * d; ry = Math.PI/2; }
+
+        // Outer stone surround
+        const surround = new THREE.Mesh(new THREE.BoxGeometry(1.1, 1.55, 0.18), archMat);
+        surround.position.set(px, wy, pz); surround.rotation.y = ry;
+        g.add(surround);
+        // Window frame (white painted wood)
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.35, 0.16), winFrameMat);
         frame.position.set(px, wy, pz); frame.rotation.y = ry;
+        g.add(frame);
+        // Glass
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.75, 1.18, 0.10), winMat);
         win.position.set(px, wy, pz); win.rotation.y = ry;
-        g.add(frame); g.add(win);
+        g.add(win);
+        // Horizontal glazing bar (top/bottom panes)
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.05, 0.12), winFrameMat);
+        bar.position.set(px, wy, pz); bar.rotation.y = ry;
+        g.add(bar);
       }
     }
   }
 
-  // Roof parapet (good landing edge)
-  const parapet = new THREE.Mesh(new THREE.BoxGeometry(w + 0.4, 0.5, d + 0.4), trimMat);
-  parapet.position.y = h + 0.25;
-  parapet.castShadow = true; parapet.receiveShadow = true;
-  g.add(parapet);
+  // Stone pilasters at corners (Georgian classical detail)
+  [[-(w/2 + 0.1), -(d/2+0.1)],[w/2+0.1, -(d/2+0.1)],[-(w/2+0.1),d/2+0.1],[w/2+0.1,d/2+0.1]].forEach(([cx,cz]) => {
+    const pil = new THREE.Mesh(new THREE.BoxGeometry(0.35, h, 0.35), stoneMat);
+    pil.position.set(cx, h/2, cz);
+    pil.castShadow = true;
+    g.add(pil);
+  });
 
-  // Roof clutter
-  if (Math.random() < 0.85) {
-    const tankW = 1.4 + Math.random() * 1.6;
-    const tankH = 0.8 + Math.random() * 1.2;
-    const tank = new THREE.Mesh(
-      new THREE.BoxGeometry(tankW, tankH, tankW),
-      new THREE.MeshStandardMaterial({ color: 0x8a8d92, roughness: 0.7 })
-    );
-    tank.position.set(
-      (Math.random() - 0.5) * (w - tankW - 1),
-      h + 0.5 + tankH / 2,
-      (Math.random() - 0.5) * (d - tankW - 1)
-    );
-    tank.castShadow = true; tank.receiveShadow = true;
-    g.add(tank);
+  // Georgian front door (ground floor, front face only)
+  {
+    const doorFrame = new THREE.Mesh(new THREE.BoxGeometry(1.4, 2.8, 0.2), stoneMat);
+    doorFrame.position.set(0, 1.4, d/2 + 0.12);
+    g.add(doorFrame);
+    const doorMat = new THREE.MeshStandardMaterial({ color: palette.door, roughness: 0.6 });
+    const door = new THREE.Mesh(new THREE.BoxGeometry(1.0, 2.4, 0.12), doorMat);
+    door.position.set(0, 1.2, d/2 + 0.14);
+    g.add(door);
+    // Fanlight arch above door
+    const fanlightGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.08, 8, 1, false, 0, Math.PI);
+    const fanlight = new THREE.Mesh(fanlightGeo, new THREE.MeshStandardMaterial({
+      color: 0x8abbe0, roughness: 0.15, metalness: 0.5,
+      polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6
+    }));
+    fanlight.rotation.x = Math.PI / 2;
+    fanlight.position.set(0, 2.55, d/2 + 0.14);
+    g.add(fanlight);
+    // Door steps
+    const stepMat = new THREE.MeshStandardMaterial({ color: 0xccc8c0, roughness: 0.85 });
+    [0.14, 0.07].forEach((sy, si) => {
+      const step = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.14, 0.4 + si * 0.25), stepMat);
+      step.position.set(0, sy, d/2 + 0.35 + si * 0.15);
+      g.add(step);
+    });
+    // Iron railings flanking door
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x181818, roughness: 0.5, metalness: 0.8 });
+    [-0.9, 0.9].forEach(rx => {
+      for (let ri = 0; ri < 4; ri++) {
+        const post = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.1, 5), railMat);
+        post.position.set(rx + (ri - 1.5) * 0.2, 0.55, d/2 + 0.6);
+        g.add(post);
+      }
+    });
   }
-  // Pipe
-  if (Math.random() < 0.6) {
-    const pipe = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.12, 0.12, h, 8),
-      new THREE.MeshStandardMaterial({ color: 0x3e3a36, roughness: 0.7, metalness: 0.4 })
-    );
-    const sign = Math.random() < 0.5 ? -1 : 1;
-    pipe.position.set(sign * (w/2 - 0.18), h / 2, (Math.random() - 0.5) * (d - 0.5));
-    pipe.castShadow = true;
-    g.add(pipe);
-  }
-  // Awning
-  if (Math.random() < 0.5) {
-    const aw = Math.min(w - 2, 3);
-    const aw2 = new THREE.Mesh(
-      new THREE.BoxGeometry(aw, 0.15, 1.2),
-      new THREE.MeshStandardMaterial({ color: [0xb4493a, 0x4a73a8, 0x6e8f4a][Math.floor(Math.random()*3)], roughness: 0.8 })
-    );
-    aw2.position.set((Math.random() - 0.5) * (w - aw), 2.6, d/2 + 0.6);
-    aw2.castShadow = true;
-    g.add(aw2);
+
+  // Chimneys on roof (2 stacks)
+  const chimneyMat = new THREE.MeshStandardMaterial({ color: palette.body, roughness: 0.95 });
+  [-w/4, w/4].forEach(cx => {
+    const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.7, 1.8 + Math.random() * 1.0, 0.7), chimneyMat);
+    chimney.position.set(cx, h + 0.9 + chimney.geometry.parameters.height / 2, (Math.random() - 0.5) * (d * 0.4));
+    chimney.castShadow = true;
+    g.add(chimney);
+    // Chimney pot
+    const pot = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.18, 0.5, 8), new THREE.MeshStandardMaterial({ color: 0xa85020, roughness: 0.7 }));
+    pot.position.set(cx, chimney.position.y + chimney.geometry.parameters.height / 2 + 0.25, chimney.position.z);
+    pot.castShadow = true;
+    g.add(pot);
+  });
+
+  // Ground-floor iron railings along street-facing side
+  {
+    const railMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.4, metalness: 0.9 });
+    const railing = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, 0.05, 0.05), railMat);
+    railing.position.set(0, 1.0, d/2 + 0.55);
+    g.add(railing);
+    for (let ri = 0; ri <= Math.floor(w / 0.4); ri++) {
+      const spike = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.03, 1.05, 5), railMat);
+      spike.position.set(-w/2 + ri * 0.4, 0.53, d/2 + 0.55);
+      g.add(spike);
+    }
+    // rail base bar
+    const rBase = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, 0.05, 0.08), railMat);
+    rBase.position.set(0, 0.05, d/2 + 0.55);
+    g.add(rBase);
   }
 
   g.position.set(x, 0, z);
   WORLD.add(g);
-  const min = new THREE.Vector3(x - w/2, 0, z - d/2);
-  const max = new THREE.Vector3(x + w/2, h, z + d/2);
-  SOLIDS.push({ min, max });
+  const bmin = new THREE.Vector3(x - w/2, 0, z - d/2);
+  const bmax = new THREE.Vector3(x + w/2, h, z + d/2);
+  SOLIDS.push({ min: bmin, max: bmax });
   return g;
 }
 
+/* London building palettes — Victorian brick colors */
 const palettes = [
-  { body: 0xd8c3a0, trim: 0xf0e3c6 },
-  { body: 0xb5a386, trim: 0xd8c9ab },
-  { body: 0xe0d2b8, trim: 0xefe5cd },
-  { body: 0xc9b89a, trim: 0xe8dcc4 },
-  { body: 0xa8b3a0, trim: 0xcdd5c6 },
-  { body: 0xe8b78a, trim: 0xf3cfa8 },
-  { body: 0xbfa68a, trim: 0xe0c9a8 },
+  { body: 0x8b4030, stone: 0xd4cabb, mortar: 0x6a3824, door: 0x1a2840 },
+  { body: 0x7a3828, stone: 0xcec5b4, mortar: 0x5e2c1e, door: 0x2a1808 },
+  { body: 0x964535, stone: 0xddd4c0, mortar: 0x703428, door: 0x1e3020 },
+  { body: 0x6e4838, stone: 0xc8bfb0, mortar: 0x543828, door: 0x3a0e10 },
+  { body: 0x824030, stone: 0xcec4b0, mortar: 0x623020, door: 0x0a2030 },
+  { body: 0x9a5040, stone: 0xe0d4c2, mortar: 0x763a2a, door: 0x203040 },
+  { body: 0x784235, stone: 0xccc4b4, mortar: 0x5a3228, door: 0x2a1a10 },
 ];
 
 const blocks = [
-  [-20, -30, 10, 12, 9],  [-22, -14, 8, 10, 12], [-22,   2, 10, 12, 7],
+  [-20, -30, 10, 12,  9], [-22, -14,  8, 10, 12], [-22,   2, 10, 12,  7],
   [-22,  22, 12, 14, 14], [-24,  42, 10, 10, 10],
-  [ 22, -30, 10, 12, 11], [ 22, -14, 12, 10, 8], [ 22,   4, 10, 12, 15],
-  [ 24,  22, 10, 14, 9],  [ 22,  42, 14, 12, 13],
-  [-38, -10, 8, 8, 7],    [-42,  10, 9, 9, 10],
-  [ 38, -10, 8, 8, 8],    [ 42,  12, 10, 9, 12],
-  [-48,  30, 10, 10, 9],  [ 48,  30, 11, 10, 11],
+  [ 22, -30, 10, 12, 11], [ 22, -14, 12, 10,  8], [ 22,   4, 10, 12, 15],
+  [ 24,  22, 10, 14,  9], [ 22,  42, 14, 12, 13],
+  [-38, -10,  8,  8,  7], [-42,  10,  9,  9, 10],
+  [ 38, -10,  8,  8,  8], [ 42,  12, 10,  9, 12],
+  [-48,  30, 10, 10,  9], [ 48,  30, 11, 10, 11],
   [  0,  60, 14, 14, 22],
-  [-14, 58, 6, 6, 8],     [ 14, 58, 6, 6, 9],
+  [-14,  58,  6,  6,  8], [ 14,  58,  6,  6,  9],
 ];
 blocks.forEach((b, i) => makeBuilding(b[0], b[1], b[2], b[3], b[4], palettes[i % palettes.length]));
+
+/* Big Ben tower landmark */
+{
+  const bbMat  = new THREE.MeshStandardMaterial({ color: 0xc8c0a8, roughness: 0.85 });
+  const bbDark = new THREE.MeshStandardMaterial({ color: 0x2a3820, roughness: 0.7 });
+  const g = new THREE.Group();
+  // Base plinth
+  const base = new THREE.Mesh(new THREE.BoxGeometry(8, 3, 8), bbMat);
+  base.position.y = 1.5; base.castShadow = true; g.add(base);
+  // Main tower
+  const tower = new THREE.Mesh(new THREE.BoxGeometry(6, 32, 6), bbMat);
+  tower.position.y = 3 + 16; tower.castShadow = true; g.add(tower);
+  // Clock faces (dark circle on each side)
+  const clockMat = new THREE.MeshStandardMaterial({ color: 0x1a2810, emissive: 0x0a1408, emissiveIntensity: 0.4, roughness: 0.3, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
+  [0, Math.PI/2, Math.PI, -Math.PI/2].forEach((ry, i) => {
+    const face = new THREE.Mesh(new THREE.CylinderGeometry(2.0, 2.0, 0.12, 16), clockMat);
+    face.rotation.x = Math.PI / 2;
+    const fz = 3.06;
+    face.position.set(Math.sin(ry) * fz, 35, Math.cos(ry) * fz);
+    face.rotation.y = ry;
+    g.add(face);
+  });
+  // Belfry decorative band
+  const belfry = new THREE.Mesh(new THREE.BoxGeometry(7.2, 1.8, 7.2), bbMat);
+  belfry.position.y = 37; belfry.castShadow = true; g.add(belfry);
+  // Spire
+  const spire = new THREE.Mesh(new THREE.ConeGeometry(2.8, 12, 8), bbMat);
+  spire.position.y = 45; spire.castShadow = true; g.add(spire);
+  g.position.set(70, 0, -40);
+  WORLD.add(g);
+  SOLIDS.push({ min: new THREE.Vector3(70-4, 0, -44), max: new THREE.Vector3(74, 57, -36) });
+}
+
+/* Red telephone boxes */
+function addPhoneBox(x, z) {
+  const redMat   = new THREE.MeshStandardMaterial({ color: 0xcc2020, roughness: 0.7 });
+  const glassMat = new THREE.MeshStandardMaterial({ color: 0x7abbe8, roughness: 0.15, metalness: 0.6, transparent: true, opacity: 0.7 });
+  const darkMat  = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
+  const g = new THREE.Group();
+  // Body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.7, 1.1), redMat);
+  body.position.y = 1.35; body.castShadow = true; g.add(body);
+  // Dome top
+  const dome = new THREE.Mesh(new THREE.BoxGeometry(1.14, 0.28, 1.14), redMat);
+  dome.position.y = 2.74; g.add(dome);
+  // Glass panels
+  [[0, 0.55],[Math.PI/2, 0.55],[Math.PI, 0.55],[-Math.PI/2, 0.55]].forEach(([ry, oz]) => {
+    const pane = new THREE.Mesh(new THREE.BoxGeometry(0.72, 1.8, 0.04), glassMat);
+    pane.position.set(Math.sin(ry)*oz, 1.5, Math.cos(ry)*oz);
+    pane.rotation.y = ry;
+    g.add(pane);
+  });
+  // Base step
+  const step = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 1.3), darkMat);
+  step.position.y = 0.06; g.add(step);
+  g.position.set(x, 0.21, z);
+  WORLD.add(g);
+  SOLIDS.push({ min: new THREE.Vector3(x - 0.6, 0, z - 0.6), max: new THREE.Vector3(x + 0.6, 3.1, z + 0.6) });
+}
+[[-14, -6], [14, 8], [-8, 38], [6, -42]].forEach(([x, z]) => addPhoneBox(x, z));
 
 /* Crates / stepping blocks */
 function addCrate(x, z, size, color = 0x7a5a3a) {
@@ -671,63 +816,81 @@ function addCrate(x, z, size, color = 0x7a5a3a) {
   [-3, -6, 0.9], [3, -6, 1.1], [-2, 14, 1.0], [2, 14, 1.3],
 ].forEach(([x,z,s]) => addCrate(x, z, s));
 
-/* Benches */
+/* London park benches — green cast-iron style */
 function addBench(x, z, rot = 0) {
   const g = new THREE.Group();
-  const seat = new THREE.Mesh(
-    new THREE.BoxGeometry(3.2, 0.2, 0.9),
-    new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.85 })
-  );
+  const woodMat = new THREE.MeshStandardMaterial({ color: 0x5a7840, roughness: 0.80 }); // dark green
+  const ironMat = new THREE.MeshStandardMaterial({ color: 0x202820, roughness: 0.45, metalness: 0.75 });
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.2, 0.9), woodMat);
   seat.position.y = 0.7; seat.castShadow = true; seat.receiveShadow = true;
   g.add(seat);
-  const backrest = new THREE.Mesh(
-    new THREE.BoxGeometry(3.2, 0.6, 0.1),
-    new THREE.MeshStandardMaterial({ color: 0x6b4a30, roughness: 0.85 })
-  );
+  const backrest = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.55, 0.1), woodMat);
   backrest.position.set(0, 1.1, -0.4); backrest.castShadow = true;
   g.add(backrest);
+  // Slatted back
+  for (let si = 0; si < 5; si++) {
+    const slat = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.1, 0.06), woodMat);
+    slat.position.set(0, 0.78 + si * 0.08, -0.38); g.add(slat);
+  }
+  // Cast-iron legs
   for (const lx of [-1.3, 1.3]) {
-    const leg = new THREE.Mesh(
-      new THREE.BoxGeometry(0.2, 0.7, 0.9),
-      new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 0.8 })
-    );
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.7, 0.7), ironMat);
     leg.position.set(lx, 0.35, 0); leg.castShadow = true;
     g.add(leg);
+    // Decorative scroll on arm
+    const scroll = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.025, 5, 10, Math.PI), ironMat);
+    scroll.rotation.x = Math.PI / 2;
+    scroll.position.set(lx, 0.72, -0.36);
+    g.add(scroll);
   }
-  g.position.set(x, 0, z); g.rotation.y = rot;
+  g.position.set(x, 0.21, z); g.rotation.y = rot;
   WORLD.add(g);
   g.updateMatrixWorld(true);
   addBoxSolidFromMesh(seat);
 }
 addBench(-6, -2, 0); addBench( 6, -2, Math.PI); addBench(-6, 16, 0); addBench( 6, 16, Math.PI);
 
-/* Lamp posts */
+/* Victorian gas-style lamp posts */
 function addLamp(x, z) {
   const g = new THREE.Group();
-  const post = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.1, 0.14, 5.2, 12),
-    new THREE.MeshStandardMaterial({ color: 0x22262a, roughness: 0.5, metalness: 0.6 })
-  );
-  post.position.y = 2.6; post.castShadow = true;
+  const ironMat = new THREE.MeshStandardMaterial({ color: 0x1a1e22, roughness: 0.45, metalness: 0.8 });
+  // Fluted post
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.14, 5.8, 10), ironMat);
+  post.position.y = 2.9; post.castShadow = true;
   g.add(post);
-  const head = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.22, 0.32, 0.5, 10),
-    new THREE.MeshStandardMaterial({ color: 0x333a42, roughness: 0.6 })
-  );
-  head.position.set(0, 5.3, 0); head.castShadow = true;
-  g.add(head);
-  const bulb = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 12, 8),
-    new THREE.MeshStandardMaterial({ color: 0xfff2b8, emissive: 0xffd36b, emissiveIntensity: 1.0 })
-  );
-  bulb.position.set(0, 4.95, 0); g.add(bulb);
-  const pl = new THREE.PointLight(0xffcb6b, 0.4, 10, 1.6);
-  pl.position.set(0, 4.9, 0);
+  // Decorative base collar
+  const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.3, 10), ironMat);
+  collar.position.y = 0.15;
+  g.add(collar);
+  // Curved arm (lantern bracket)
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.08, 0.08), ironMat);
+  arm.position.set(0.37, 5.9, 0);
+  g.add(arm);
+  // Lantern housing
+  const lanternMat = new THREE.MeshStandardMaterial({ color: 0x1a1e22, roughness: 0.4, metalness: 0.9 });
+  const lantern = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.5, 0.36), lanternMat);
+  lantern.position.set(0.75, 5.85, 0);
+  g.add(lantern);
+  // Glass panes
+  const glassMat = new THREE.MeshStandardMaterial({
+    color: 0xffe880, emissive: 0xffc840, emissiveIntensity: 0.9,
+    transparent: true, opacity: 0.75, roughness: 0.1
+  });
+  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.36, 0.28), glassMat);
+  glass.position.set(0.75, 5.85, 0);
+  g.add(glass);
+  // Roof cap
+  const cap = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.28, 6), ironMat);
+  cap.position.set(0.75, 6.22, 0);
+  g.add(cap);
+  // Point light
+  const pl = new THREE.PointLight(0xffd060, 0.5, 12, 1.8);
+  pl.position.set(0.75, 5.85, 0);
   g.add(pl);
-  g.position.set(x, 0, z);
+  g.position.set(x, 0.21, z);
   WORLD.add(g);
 }
-for (let z = -70; z <= 70; z += 20) { addLamp(-8, z); addLamp(8, z); }
+for (let z = -70; z <= 70; z += 16) { addLamp(-11, z); addLamp(11, z); }
 
 /* Trees */
 function addTree(x, z, scale = 1) {
@@ -813,37 +976,39 @@ for (let i = 0; i < 30; i++) {
   addRock(x, z, 0.5 + Math.random() * 1.0);
 }
 
-/* Distant hills */
-for (let i = 0; i < 14; i++) {
-  const a = (i / 14) * Math.PI * 2;
-  const r = 160 + Math.random() * 30;
+/* Distant London suburbs */
+for (let i = 0; i < 16; i++) {
+  const a = (i / 16) * Math.PI * 2;
+  const r = 150 + Math.random() * 40;
   const x = Math.cos(a) * r, z = Math.sin(a) * r;
-  const h = 10 + Math.random() * 18;
+  const h = 8 + Math.random() * 14;
+  const hillColor = [0x4a5e48, 0x505848, 0x4a5a50, 0x586050][Math.floor(Math.random()*4)];
   const hill = new THREE.Mesh(
-    new THREE.SphereGeometry(h, 14, 10),
-    new THREE.MeshStandardMaterial({ color: 0x4a6b3d, roughness: 1, flatShading: true })
+    new THREE.SphereGeometry(h, 12, 8),
+    new THREE.MeshStandardMaterial({ color: hillColor, roughness: 1, flatShading: true })
   );
-  hill.position.set(x, -h * 0.4, z);
-  hill.scale.y = 0.5 + Math.random() * 0.3;
+  hill.position.set(x, -h * 0.45, z);
+  hill.scale.y = 0.4 + Math.random() * 0.25;
   hill.receiveShadow = true;
   WORLD.add(hill);
 }
 
-/* Clouds */
+/* Clouds — London overcast, heavy flat-bottomed stratus */
 const clouds = [];
-for (let i = 0; i < 24; i++) {
+for (let i = 0; i < 30; i++) {
   const c = new THREE.Group();
-  const n = 3 + Math.floor(Math.random() * 3);
+  const n = 4 + Math.floor(Math.random() * 4);
+  const cloudColor = [0xc8d4dc, 0xb8c8d4, 0xd0dae0][Math.floor(Math.random() * 3)];
   for (let j = 0; j < n; j++) {
     const s = new THREE.Mesh(
-      new THREE.SphereGeometry(3 + Math.random() * 3, 8, 6),
-      new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, emissive: 0xffffff, emissiveIntensity: 0.03 })
+      new THREE.SphereGeometry(5 + Math.random() * 5, 8, 6),
+      new THREE.MeshStandardMaterial({ color: cloudColor, roughness: 1 })
     );
-    s.position.set(j * 3, Math.random() * 1, Math.random() * 2);
-    s.scale.y = 0.5;
+    s.position.set(j * 5.5, Math.random() * 1.5, Math.random() * 3);
+    s.scale.y = 0.32 + Math.random() * 0.18;  // flat London clouds
     c.add(s);
   }
-  c.position.set((Math.random() - 0.5) * 340, 55 + Math.random() * 35, (Math.random() - 0.5) * 340);
+  c.position.set((Math.random() - 0.5) * 360, 50 + Math.random() * 40, (Math.random() - 0.5) * 360);
   WORLD.add(c); clouds.push(c);
 }
 
@@ -912,303 +1077,327 @@ function cameraAvoidObstacle(from, to) {
 }
 
 /* ================================================================
-   CAT MODEL (much cuter)
+   CAT MODEL — Japanese anime style
 ================================================================ */
 const cat = new THREE.Group();
 scene.add(cat);
 
-/* Palette */
-const FUR = 0xe8b678;       // warm ginger
-const FUR_DARK = 0xc98544;  // stripes
-const FUR_WHITE = 0xfaefd6; // belly, paws, chin
-const NOSE = 0xe88fa2;      // pink
-const EAR_INNER = 0xf4b4b2;
-const EYE_GREEN = 0x7dc87d;
+/* Anime cat palette */
+const FUR       = 0xfff4e0;   // cream vanilla base
+const FUR_PATCH = 0xe07830;   // orange calico patches
+const FUR_GRAY  = 0xd0ccc4;   // cool-gray areas
+const FUR_WHITE = 0xfffef8;   // pure white belly / socks
+const NOSE_COL  = 0xf09fb8;   // soft pink nose
+const EAR_INNER = 0xf8c0c8;   // warm pink ear inner
+const EYE_TEAL  = 0x38c8d8;   // bright anime teal iris
 
-const furMat = new THREE.MeshStandardMaterial({ color: FUR, roughness: 0.85 });
-const stripeMat = new THREE.MeshStandardMaterial({ color: FUR_DARK, roughness: 0.9 });
-const whiteMat = new THREE.MeshStandardMaterial({ color: FUR_WHITE, roughness: 0.9 });
-const noseMat = new THREE.MeshStandardMaterial({ color: NOSE, roughness: 0.5 });
-const earInnerMat = new THREE.MeshStandardMaterial({ color: EAR_INNER, roughness: 0.8 });
-const eyeMat = new THREE.MeshStandardMaterial({ color: EYE_GREEN, emissive: 0x2f5a2f, emissiveIntensity: 0.25, roughness: 0.2 });
-const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xfff9e6, roughness: 0.4 });
-const pupilMat = new THREE.MeshStandardMaterial({ color: 0x0a0a0a, roughness: 0.4 });
-const clawMat = new THREE.MeshStandardMaterial({ color: 0xf0e3c6, roughness: 0.5 });
+const furMat      = new THREE.MeshStandardMaterial({ color: FUR,       roughness: 0.88 });
+const patchMat    = new THREE.MeshStandardMaterial({ color: FUR_PATCH, roughness: 0.88 });
+const grayMat     = new THREE.MeshStandardMaterial({ color: FUR_GRAY,  roughness: 0.88 });
+const whiteMat    = new THREE.MeshStandardMaterial({ color: FUR_WHITE, roughness: 0.90 });
+const noseMat     = new THREE.MeshStandardMaterial({ color: NOSE_COL,  roughness: 0.45 });
+const earInnerMat = new THREE.MeshStandardMaterial({ color: EAR_INNER, roughness: 0.75 });
+const eyeOutMat   = new THREE.MeshStandardMaterial({ color: 0x181820,  roughness: 0.25 });
+const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xfdf9f6,  roughness: 0.35 });
+const eyeMat      = new THREE.MeshStandardMaterial({ color: EYE_TEAL, emissive: 0x108898, emissiveIntensity: 0.4, roughness: 0.15 });
+const pupilMat    = new THREE.MeshStandardMaterial({ color: 0x0a0812,  roughness: 0.3 });
 
-/**
- * Local axes convention for the cat:
- *   +Z = FORWARD (tail points to -Z)
- *   +Y = UP
- *   +X = right
- */
 const bipedRot = new THREE.Group();
 cat.add(bipedRot);
 const body = new THREE.Group();
 bipedRot.add(body);
 
-/* Torso — two spheres for a chubby silhouette */
-const chest = new THREE.Mesh(new THREE.SphereGeometry(0.52, 20, 14), furMat);
-chest.scale.set(1.0, 1.0, 1.25);
-chest.position.set(0, 0.68, 0.52);
+/* Torso — compact, round anime body */
+const chest = new THREE.Mesh(new THREE.SphereGeometry(0.46, 20, 14), furMat);
+chest.scale.set(1.0, 1.0, 1.20);
+chest.position.set(0, 0.64, 0.46);
 chest.castShadow = true;
 body.add(chest);
 
-const rump = new THREE.Mesh(new THREE.SphereGeometry(0.56, 20, 14), furMat);
-rump.scale.set(1.0, 0.98, 1.22);
-rump.position.set(0, 0.66, -0.46);
+const rump = new THREE.Mesh(new THREE.SphereGeometry(0.50, 20, 14), furMat);
+rump.scale.set(1.0, 0.96, 1.18);
+rump.position.set(0, 0.62, -0.42);
 rump.castShadow = true;
 body.add(rump);
 
-/* Belly (white) */
-const belly = new THREE.Mesh(new THREE.SphereGeometry(0.44, 14, 10), whiteMat);
-belly.scale.set(0.88, 0.68, 1.95);
-belly.position.set(0, 0.50, 0.04);
-belly.castShadow = true;
+/* Orange calico patch on back/rump */
+{
+  const patch1 = new THREE.Mesh(new THREE.SphereGeometry(0.28, 14, 10), patchMat);
+  patch1.scale.set(1.2, 0.5, 1.4);
+  patch1.position.set(0.1, 0.88, 0.1);
+  body.add(patch1);
+  const patch2 = new THREE.Mesh(new THREE.SphereGeometry(0.24, 12, 8), patchMat);
+  patch2.scale.set(1.1, 0.45, 1.0);
+  patch2.position.set(-0.15, 0.84, -0.3);
+  body.add(patch2);
+  const patch3 = new THREE.Mesh(new THREE.SphereGeometry(0.18, 10, 8), grayMat);
+  patch3.scale.set(0.9, 0.4, 0.8);
+  patch3.position.set(0.22, 0.80, 0.5);
+  body.add(patch3);
+}
+
+/* White belly */
+const belly = new THREE.Mesh(new THREE.SphereGeometry(0.40, 14, 10), whiteMat);
+belly.scale.set(0.82, 0.62, 1.80);
+belly.position.set(0, 0.46, 0.02);
 body.add(belly);
 
-/* Tabby stripes on back */
-for (let i = 0; i < 5; i++) {
-  const s = new THREE.Mesh(
-    new THREE.TorusGeometry(0.42, 0.04, 6, 20, Math.PI * 0.7),
-    stripeMat
-  );
-  s.rotation.x = Math.PI / 2;
-  s.rotation.z = Math.PI;
-  s.position.set(0, 1.05, 0.6 - i * 0.3);
-  s.scale.set(1.0, 0.8, 1.0);
-  body.add(s);
-}
-
-/* Shoulder / hip stripe tufts */
-[[-0.32, 0.85, 0.5],[0.32, 0.85, 0.5],[-0.32, 0.85, -0.4],[0.32, 0.85, -0.4]].forEach(p => {
-  const t = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), stripeMat);
-  t.position.set(...p);
-  body.add(t);
-});
-
-/* Neck + Head rig — raised for bigger head */
+/* Neck + Head rig */
 const headRig = new THREE.Group();
-headRig.position.set(0, 1.00, 1.02);
+headRig.position.set(0, 1.02, 1.06);
 body.add(headRig);
 
-/* Head — rounder, bigger kitten */
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.46, 24, 18), furMat);
-head.scale.set(1.22, 1.10, 1.04);
-head.castShadow = true;
-headRig.add(head);
+/* Anime head — very large, round */
+const animeHead = new THREE.Mesh(new THREE.SphereGeometry(0.54, 28, 20), furMat);
+animeHead.scale.set(1.18, 1.06, 1.0);
+animeHead.castShadow = true;
+headRig.add(animeHead);
 
-/* Forehead stripes */
-for (let i = 0; i < 3; i++) {
-  const st = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.12, 0.02), stripeMat);
-  st.position.set((i - 1) * 0.12, 0.25, 0.33);
-  headRig.add(st);
+/* Orange patch on top of head */
+{
+  const hp = new THREE.Mesh(new THREE.SphereGeometry(0.28, 12, 8), patchMat);
+  hp.scale.set(1.1, 0.4, 1.0);
+  hp.position.set(0.08, 0.38, 0.0);
+  headRig.add(hp);
 }
 
-/* Cheeks (puffy) */
+/* Cheeks — extra puffy for anime look */
 for (const sx of [-1, 1]) {
-  const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.20, 12, 10), whiteMat);
-  cheek.position.set(sx * 0.20, -0.04, 0.30);
-  cheek.scale.set(0.92, 0.82, 0.72);
+  const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.24, 14, 10), whiteMat);
+  cheek.position.set(sx * 0.28, -0.06, 0.35);
+  cheek.scale.set(0.88, 0.72, 0.60);
   headRig.add(cheek);
 }
 
-/* Blush marks */
-const blushMat = new THREE.MeshStandardMaterial({ color: 0xff8fa8, transparent: true, opacity: 0.32, roughness: 1.0 });
+/* Blush marks — prominent anime-style */
+const blushMat = new THREE.MeshStandardMaterial({ color: 0xff90b0, transparent: true, opacity: 0.40, roughness: 1.0 });
 for (const sx of [-1, 1]) {
-  const blush = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), blushMat);
-  blush.position.set(sx * 0.26, -0.06, 0.34);
-  blush.scale.set(0.85, 0.55, 0.4);
+  const blush = new THREE.Mesh(new THREE.SphereGeometry(0.16, 12, 8), blushMat);
+  blush.position.set(sx * 0.30, -0.08, 0.38);
+  blush.scale.set(0.90, 0.52, 0.35);
   headRig.add(blush);
 }
 
-/* Muzzle (white) */
-const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.18, 14, 10), whiteMat);
-muzzle.position.set(0, -0.08, 0.34);
-muzzle.scale.set(1.1, 0.85, 0.9);
+/* Muzzle */
+const muzzle = new THREE.Mesh(new THREE.SphereGeometry(0.20, 16, 12), whiteMat);
+muzzle.position.set(0, -0.10, 0.38);
+muzzle.scale.set(1.05, 0.80, 0.85);
 headRig.add(muzzle);
 
-/* Nose (heart shape via two tiny spheres + center) */
-const noseL = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), noseMat);
-noseL.position.set(-0.028, -0.02, 0.46);
+/* Nose — tiny heart */
+const noseL = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 6), noseMat);
+noseL.position.set(-0.022, -0.01, 0.52);
 headRig.add(noseL);
-const noseR = new THREE.Mesh(new THREE.SphereGeometry(0.04, 8, 6), noseMat);
-noseR.position.set( 0.028, -0.02, 0.46);
+const noseR = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 6), noseMat);
+noseR.position.set( 0.022, -0.01, 0.52);
 headRig.add(noseR);
-const noseC = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), noseMat);
-noseC.position.set(0, -0.05, 0.47);
+const noseC = new THREE.Mesh(new THREE.SphereGeometry(0.032, 8, 6), noseMat);
+noseC.position.set(0, -0.04, 0.53);
 headRig.add(noseC);
 
-/* Mouth (small curve) */
+/* Mouth */
 {
-  const mouthMat = new THREE.LineBasicMaterial({ color: 0x3d2418 });
-  const p = new THREE.BufferGeometry().setFromPoints([
-    new THREE.Vector3(-0.07, -0.13, 0.45),
-    new THREE.Vector3(0, -0.1, 0.47),
-    new THREE.Vector3(0, -0.14, 0.46),
-    new THREE.Vector3(0.07, -0.13, 0.45),
+  const mouthMat = new THREE.LineBasicMaterial({ color: 0x6a3030 });
+  const mp = new THREE.BufferGeometry().setFromPoints([
+    new THREE.Vector3(-0.06, -0.12, 0.51),
+    new THREE.Vector3(0, -0.09, 0.53),
+    new THREE.Vector3(0, -0.13, 0.52),
+    new THREE.Vector3(0.06, -0.12, 0.51),
   ]);
-  headRig.add(new THREE.Line(p, mouthMat));
+  headRig.add(new THREE.Line(mp, mouthMat));
 }
 
-/* Ears — rounder, taller, cuter */
+/* Anime ears — tall, pointed */
 function mkEar(x) {
   const root = new THREE.Group();
-  root.position.set(x * 1.05, 0.36, -0.05);
-  root.rotation.z = -x * 0.20;
-  root.rotation.x = -0.12;
+  root.position.set(x * 1.10, 0.44, -0.06);
+  root.rotation.z = -x * 0.18;
+  root.rotation.x = -0.06;
   headRig.add(root);
-  const e = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.38, 14), furMat);
-  e.position.y = 0.19;
-  e.castShadow = true;
-  root.add(e);
-  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 12), earInnerMat);
-  inner.position.set(0, 0.16, 0.05);
+  const outer = new THREE.Mesh(new THREE.ConeGeometry(0.22, 0.52, 16), furMat);
+  outer.position.y = 0.26;
+  outer.castShadow = true;
+  root.add(outer);
+  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.38, 14), earInnerMat);
+  inner.position.set(0, 0.22, 0.06);
   root.add(inner);
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 6), stripeMat);
-  tip.position.y = 0.40;
-  root.add(tip);
+  // orange patch base of ear
+  const earPatch = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.18, 10), patchMat);
+  earPatch.position.y = 0.09;
+  root.add(earPatch);
   return root;
 }
-const earL = mkEar(-0.22);
-const earR = mkEar( 0.22);
+const earL = mkEar(-0.26);
+const earR = mkEar( 0.26);
 
-/* Eyes — big anime with triple sparkle */
+/* Anime eyes — huge, expressive, teal irises */
 function mkEye(x) {
   const g = new THREE.Group();
-  g.position.set(x * 1.05, 0.10, 0.32);
+  // Positioned further forward on the large head
+  g.position.set(x * 1.02, 0.10, 0.44);
   headRig.add(g);
-  const w = new THREE.Mesh(new THREE.SphereGeometry(0.125, 16, 12), eyeWhiteMat);
-  w.scale.set(1.0, 1.08, 0.52);
-  g.add(w);
-  const e = new THREE.Mesh(new THREE.SphereGeometry(0.108, 16, 12), eyeMat);
-  e.position.z = 0.038;
-  e.scale.set(1.0, 1.08, 0.52);
-  g.add(e);
-  const p = new THREE.Mesh(new THREE.CapsuleGeometry(0.015, 0.072, 4, 8), pupilMat);
-  p.position.set(0, 0, 0.092);
-  g.add(p);
-  // three sparkle highlights
+
+  // Dark outline rim (gives anime "ink" outline feel)
+  const outline = new THREE.Mesh(new THREE.SphereGeometry(0.160, 22, 16), eyeOutMat);
+  outline.scale.set(1.15, 1.30, 0.38);
+  g.add(outline);
+
+  // Eye white
+  const ew = new THREE.Mesh(new THREE.SphereGeometry(0.148, 20, 14), eyeWhiteMat);
+  ew.scale.set(1.12, 1.26, 0.30);
+  ew.position.z = 0.010;
+  g.add(ew);
+
+  // Large teal iris
+  const iris = new THREE.Mesh(new THREE.SphereGeometry(0.120, 18, 14), eyeMat);
+  iris.scale.set(1.0, 1.15, 0.28);
+  iris.position.z = 0.022;
+  g.add(iris);
+
+  // Pupil — vertical slit (anime cat style)
+  const pupil = new THREE.Mesh(new THREE.CapsuleGeometry(0.020, 0.098, 4, 8), pupilMat);
+  pupil.position.z = 0.050;
+  g.add(pupil);
+
+  // Gradient lower shade on iris
+  const shade = new THREE.Mesh(new THREE.SphereGeometry(0.08, 14, 10), new THREE.MeshStandardMaterial({ color: 0x1068a0, roughness: 0.1 }));
+  shade.scale.set(1.1, 0.55, 0.22);
+  shade.position.set(0, -0.048, 0.028);
+  g.add(shade);
+
+  // Main highlight (large white star)
   const spMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
-  const sp1 = new THREE.Mesh(new THREE.SphereGeometry(0.030, 8, 6), spMat);
-  sp1.position.set(x > 0 ? 0.030 : -0.030, 0.038, 0.108);
+  const sp1 = new THREE.Mesh(new THREE.SphereGeometry(0.042, 8, 6), spMat);
+  sp1.position.set(x > 0 ? 0.042 : -0.042, 0.055, 0.060);
   g.add(sp1);
-  const sp2 = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 6), spMat);
-  sp2.position.set(x > 0 ? -0.018 : 0.018, -0.040, 0.103);
+  // Secondary highlight
+  const sp2 = new THREE.Mesh(new THREE.SphereGeometry(0.020, 6, 5), spMat);
+  sp2.position.set(x > 0 ? -0.030 : 0.030, -0.040, 0.055);
   g.add(sp2);
-  const sp3 = new THREE.Mesh(new THREE.SphereGeometry(0.009, 5, 5), spMat);
-  sp3.position.set(x > 0 ? 0.042 : -0.042, -0.018, 0.104);
+  // Tiny third highlight
+  const sp3 = new THREE.Mesh(new THREE.SphereGeometry(0.012, 5, 4), spMat);
+  sp3.position.set(x > 0 ? 0.058 : -0.058, -0.010, 0.054);
   g.add(sp3);
+
   return g;
 }
-const eyeL = mkEye(-0.16);
-const eyeR = mkEye( 0.16);
+const eyeL = mkEye(-0.18);
+const eyeR = mkEye( 0.18);
 
-/* Whiskers */
+/* Whiskers — fine, long */
 {
-  const wMat = new THREE.LineBasicMaterial({ color: 0xfaf2e0, transparent: true, opacity: 0.95 });
+  const wMat = new THREE.LineBasicMaterial({ color: 0xfdfaf6, transparent: true, opacity: 0.90 });
   for (const side of [-1, 1]) {
-    for (let i = 0; i < 3; i++) {
-      const y = -0.02 - i * 0.025;
-      const g = new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(side * 0.16, y, 0.38),
-        new THREE.Vector3(side * 0.48, y + (i - 1) * 0.02, 0.34)
+    for (let i = 0; i < 4; i++) {
+      const y = 0.00 - i * 0.022;
+      const gp = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(side * 0.18, y, 0.50),
+        new THREE.Vector3(side * 0.62, y + (i - 1.5) * 0.025, 0.42),
       ]);
-      headRig.add(new THREE.Line(g, wMat));
+      headRig.add(new THREE.Line(gp, wMat));
     }
   }
 }
 
-/* Legs: 4 rigs with shoulder pivot, knee, paw */
+/* Legs — short, cute anime cat legs */
 function mkLeg(x, z, isFront) {
   const rig = new THREE.Group();
-  rig.position.set(x, 0.58, z);
+  rig.position.set(x, 0.54, z);
   body.add(rig);
-  // upper (pointing down from rig)
-  const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.10, 0.40, 10), furMat);
-  upper.position.y = -0.2; upper.castShadow = true;
+  const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.10, 0.09, 0.36, 10), furMat);
+  upper.position.y = -0.18; upper.castShadow = true;
   rig.add(upper);
+  // Orange patch on shoulder
+  const patch = new THREE.Mesh(new THREE.SphereGeometry(0.10, 8, 6), patchMat);
+  patch.position.y = -0.06;
+  patch.scale.set(1.2, 0.5, 1.0);
+  rig.add(patch);
   const knee = new THREE.Group();
-  knee.position.y = -0.40;
+  knee.position.y = -0.36;
   rig.add(knee);
-  const lower = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.38, 10), furMat);
-  lower.position.y = -0.19; lower.castShadow = true;
+  const lower = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.34, 10), furMat);
+  lower.position.y = -0.17; lower.castShadow = true;
   knee.add(lower);
-  // white sock
-  const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.085, 0.14, 10), whiteMat);
-  sock.position.y = -0.35;
+  // White sock
+  const sock = new THREE.Mesh(new THREE.CylinderGeometry(0.090, 0.082, 0.16, 10), whiteMat);
+  sock.position.y = -0.32;
   knee.add(sock);
-  const paw = new THREE.Mesh(new THREE.SphereGeometry(0.11, 12, 10), whiteMat);
-  paw.position.y = -0.42; paw.scale.y = 0.7;
+  // Paw
+  const paw = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), whiteMat);
+  paw.position.y = -0.40; paw.scale.set(1.05, 0.65, 1.10);
   paw.castShadow = true;
   knee.add(paw);
-  // toe beans (pink)
-  const beanMat = new THREE.MeshStandardMaterial({ color: 0xf2a0a8, roughness: 0.7 });
-  const mainBean = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), beanMat);
-  mainBean.position.set(0, -0.46, 0.06);
+  // Pink toe beans
+  const beanMat = new THREE.MeshStandardMaterial({ color: 0xf5a0b8, roughness: 0.65 });
+  const mainBean = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 6), beanMat);
+  mainBean.position.set(0, -0.44, 0.07);
   knee.add(mainBean);
   for (let i = 0; i < 3; i++) {
-    const b = new THREE.Mesh(new THREE.SphereGeometry(0.02, 8, 6), beanMat);
-    b.position.set((i - 1) * 0.03, -0.47, 0.10);
+    const b = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), beanMat);
+    b.position.set((i - 1) * 0.034, -0.45, 0.11);
     knee.add(b);
   }
   return { rig, knee, isFront, baseX: x, baseZ: z };
 }
-/* z > 0 = front leg (front is +Z now) */
 const legs = [
-  mkLeg(-0.23,  0.6, true),
-  mkLeg( 0.23,  0.6, true),
-  mkLeg(-0.23, -0.55, false),
-  mkLeg( 0.23, -0.55, false),
+  mkLeg(-0.22,  0.58, true),
+  mkLeg( 0.22,  0.58, true),
+  mkLeg(-0.22, -0.52, false),
+  mkLeg( 0.22, -0.52, false),
 ];
 
-/* Tail — multi-segment, curled up neutral */
+/* Tail — fluffy anime tail, orange + cream segments */
 const tail = new THREE.Group();
-tail.position.set(0, 0.85, -0.9);
+tail.position.set(0, 0.80, -0.88);
 body.add(tail);
 const tailSegs = [];
 {
   let parent = tail;
   for (let i = 0; i < 10; i++) {
     const seg = new THREE.Group();
-    seg.position.z = -0.14;
+    seg.position.z = -0.13;
     parent.add(seg);
+    const tc = (i % 3 === 0) ? patchMat : (i % 3 === 1 ? furMat : whiteMat);
     const m = new THREE.Mesh(
-      new THREE.SphereGeometry(0.10 - i * 0.006, 10, 8),
-      (i % 2 === 0) ? furMat : stripeMat
+      new THREE.SphereGeometry(0.11 - i * 0.005, 12, 8), tc
     );
-    m.position.z = -0.06; m.castShadow = true;
+    m.position.z = -0.055; m.castShadow = true;
     seg.add(m);
     tailSegs.push(seg);
     parent = seg;
   }
-  // fluffy white tail tip
-  const tipMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 });
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), tipMat);
+  // Fluffy tip
+  const tipMat = new THREE.MeshStandardMaterial({ color: 0xfff8f0, roughness: 0.95 });
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), tipMat);
   tip.position.z = -0.10;
   tailSegs[tailSegs.length - 1].add(tip);
-  // extra fluff layers
-  for (let fi = 0; fi < 3; fi++) {
-    const f = new THREE.Mesh(new THREE.SphereGeometry(0.09 + fi * 0.015, 8, 6), tipMat);
-    f.position.set((fi - 1) * 0.06, (fi % 2 === 0 ? 0.05 : -0.05), -0.06);
+  for (let fi = 0; fi < 4; fi++) {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.10 + fi * 0.012, 8, 6), tipMat);
+    f.position.set((fi % 2 === 0 ? 1 : -1) * 0.07, (fi < 2 ? 0.06 : -0.06), -0.06);
     tailSegs[tailSegs.length - 1].add(f);
   }
 }
 
-/* Collar + bell */
+/* Ribbon collar + bell */
 {
-  const collarMat = new THREE.MeshStandardMaterial({ color: 0xe03050, roughness: 0.5, metalness: 0.1 });
-  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.30, 0.048, 8, 28), collarMat);
-  collar.position.set(0, 0.78, 0.42);
-  collar.rotation.x = Math.PI / 2 - 0.28;
+  const collarMat = new THREE.MeshStandardMaterial({ color: 0xd82860, roughness: 0.4, metalness: 0.1 });
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.050, 8, 30), collarMat);
+  collar.position.set(0, 0.76, 0.40);
+  collar.rotation.x = Math.PI / 2 - 0.25;
   body.add(collar);
-  const bellMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.15, metalness: 0.9, emissive: 0xaa8800, emissiveIntensity: 0.18 });
-  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 8), bellMat);
-  bell.scale.y = 1.15;
-  bell.position.set(0, 0.60, 0.69);
+  // Bow tie on collar
+  const bowMat = new THREE.MeshStandardMaterial({ color: 0xff4080, roughness: 0.5 });
+  const bow = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.08, 0.06), bowMat);
+  bow.position.set(0, 0.63, 0.65);
+  body.add(bow);
+  // Bell
+  const bellMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.12, metalness: 0.92, emissive: 0xb08800, emissiveIntensity: 0.22 });
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.065, 12, 8), bellMat);
+  bell.scale.y = 1.18;
+  bell.position.set(0, 0.56, 0.67);
   body.add(bell);
 }
 
-/* Cat collision sized */
 const CAT_HEIGHT = 1.0;
 const CAT_RADIUS = 0.46;
 
@@ -1730,7 +1919,7 @@ function resolveTrees(next, curY) {
    CAT ANIMATION
 ================================================================ */
 function catAnim(dt) {
-  // Reset
+  // Reset all per-frame animated transforms
   for (const L of legs) {
     L.rig.rotation.set(0, 0, 0);
     L.knee.rotation.set(0, 0, 0);
@@ -1739,6 +1928,9 @@ function catAnim(dt) {
   body.position.set(0, 0, 0);
   cat.rotation.z = 0;
   cat.rotation.x = 0;
+  headRig.rotation.set(0, 0, 0);
+  // Reset ear idle overrides (ear tracking uses lerp below, so this is overwritten)
+  // earL / earR use += lerp so we don't reset them here
 
   const spd = state.moveSpeed;
   const runCycle = state.time * (6 + spd * 10);
@@ -1759,65 +1951,135 @@ function catAnim(dt) {
     // Idle — cute actions when not moving
     if (spd < 0.05) {
       state.idleT += dt;
-      // pick a new idle action every few seconds
       if (state.idleActionT <= 0) {
-        const actions = ['breathe','breathe','sit','groom','look','tailflick','blink','stretch','meow'];
+        const actions = ['breathe','breathe','sit','groom','look','tailflick','blink',
+                         'stretch','meow','earScratch','rollOver','yawn','hiss','pawWave'];
         state.idleAction = actions[Math.floor(Math.random() * actions.length)];
-        state.idleActionDur = 1.8 + Math.random() * 2.2;
+        state.idleActionDur = 2.0 + Math.random() * 2.5;
         state.idleActionT = state.idleActionDur;
       }
       state.idleActionT -= dt;
       const ap = 1 - (state.idleActionT / state.idleActionDur); // 0..1
+      const eio = t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t; // ease-in-out
 
       // base breathing
       body.position.y = Math.sin(state.time * 2) * 0.018;
       body.rotation.x = Math.sin(state.time * 2) * 0.015;
 
       if (state.idleAction === 'sit') {
-        // cute sit: back legs tucked under, front legs straight
         body.position.y = -0.02;
         body.rotation.x = -0.05;
-        // back legs tuck high
-        legs[2].rig.rotation.x = 1.0;
-        legs[2].knee.rotation.x = 1.6;
-        legs[3].rig.rotation.x = 1.0;
-        legs[3].knee.rotation.x = 1.6;
-        // front legs straight
-        legs[0].rig.rotation.x = 0; legs[0].knee.rotation.x = 0;
-        legs[1].rig.rotation.x = 0; legs[1].knee.rotation.x = 0;
+        legs[2].rig.rotation.x = 1.0; legs[2].knee.rotation.x = 1.6;
+        legs[3].rig.rotation.x = 1.0; legs[3].knee.rotation.x = 1.6;
+        legs[0].rig.rotation.x = 0;   legs[0].knee.rotation.x = 0;
+        legs[1].rig.rotation.x = 0;   legs[1].knee.rotation.x = 0;
+
       } else if (state.idleAction === 'groom') {
-        // lick paw — raise one front leg to mouth
         const wave = Math.sin(ap * Math.PI * 4);
         legs[0].rig.rotation.x = 0.6 + wave * 0.2;
         legs[0].knee.rotation.x = 1.2 + wave * 0.2;
-        headRig.rotation.x = 0.3;
-        headRig.rotation.z = 0.15 + wave * 0.05;
+        headRig.rotation.x = 0.3; headRig.rotation.z = 0.15 + wave * 0.05;
+
       } else if (state.idleAction === 'look') {
-        // look around curiously
-        headRig.rotation.y = Math.sin(ap * Math.PI * 2) * 0.6;
-        headRig.rotation.x = Math.cos(ap * Math.PI * 3) * 0.15;
+        headRig.rotation.y = Math.sin(ap * Math.PI * 2) * 0.7;
+        headRig.rotation.x = Math.cos(ap * Math.PI * 3) * 0.18;
+
       } else if (state.idleAction === 'tailflick') {
-        // extra tail flick handled in tail loop via flag
+        // handled in tail loop
+
       } else if (state.idleAction === 'blink') {
         // handled in eye scale below
+
       } else if (state.idleAction === 'stretch') {
-        // stretch forward — arch back, extend front legs
         const s = Math.sin(ap * Math.PI);
-        body.position.y = -0.08 * s;
-        body.rotation.x = -0.25 * s;
-        legs[0].rig.rotation.x = 0.6 * s;
-        legs[1].rig.rotation.x = 0.6 * s;
-        legs[0].knee.rotation.x = -0.3 * s;
-        legs[1].knee.rotation.x = -0.3 * s;
+        body.position.y = -0.09 * s;
+        body.rotation.x = -0.28 * s;
+        legs[0].rig.rotation.x =  0.65 * s; legs[0].knee.rotation.x = -0.3 * s;
+        legs[1].rig.rotation.x =  0.65 * s; legs[1].knee.rotation.x = -0.3 * s;
+        legs[2].rig.rotation.x = -0.4  * s;
+        legs[3].rig.rotation.x = -0.4  * s;
+
       } else if (state.idleAction === 'meow') {
-        // little hop-like body bob
         body.position.y = Math.abs(Math.sin(ap * Math.PI * 3)) * 0.04;
-        headRig.rotation.x = -0.1 + Math.sin(ap * Math.PI * 3) * 0.1;
+        headRig.rotation.x = -0.1 + Math.sin(ap * Math.PI * 3) * 0.12;
+        muzzle.scale.y = 1.0 + Math.abs(Math.sin(ap * Math.PI * 3)) * 0.18;
+
+      } else if (state.idleAction === 'earScratch') {
+        // Back right leg (legs[3]) raises up to scratch behind ear
+        const sc = Math.sin(ap * Math.PI);
+        const fastScratch = Math.sin(ap * Math.PI * 12);
+        legs[3].rig.rotation.x = -1.2 * sc;
+        legs[3].rig.rotation.z = -0.8 * sc;
+        legs[3].knee.rotation.x = -1.4 * sc;
+        // head tilts slightly away
+        headRig.rotation.z = 0.15 * sc;
+        headRig.rotation.x = -0.1 * sc + fastScratch * 0.04 * sc;
+
+      } else if (state.idleAction === 'rollOver') {
+        // Rolls onto back, all legs splayed up
+        const phase = Math.min(1, ap * 2.0);
+        const rollAngle = eio(phase) * Math.PI; // 0 → π (on back)
+        body.rotation.z = rollAngle;
+        body.position.y = -0.1 * Math.sin(rollAngle);
+        if (phase > 0.5) {
+          // Legs go up when on back
+          const legUp = eio(Math.min(1, (phase - 0.5) * 2));
+          legs[0].rig.rotation.x = -0.8 * legUp;
+          legs[1].rig.rotation.x = -0.8 * legUp;
+          legs[0].rig.rotation.z = -0.6 * legUp;
+          legs[1].rig.rotation.z =  0.6 * legUp;
+          legs[2].rig.rotation.x = -0.6 * legUp;
+          legs[3].rig.rotation.x = -0.6 * legUp;
+          legs[2].rig.rotation.z = -0.5 * legUp;
+          legs[3].rig.rotation.z =  0.5 * legUp;
+          legs[0].knee.rotation.x = 0.9 * legUp;
+          legs[1].knee.rotation.x = 0.9 * legUp;
+          legs[2].knee.rotation.x = 0.7 * legUp;
+          legs[3].knee.rotation.x = 0.7 * legUp;
+        }
+
+      } else if (state.idleAction === 'yawn') {
+        // Head tilts back, mouth opens wide
+        const yp = Math.sin(ap * Math.PI);
+        headRig.rotation.x = -0.4 * yp;
+        muzzle.scale.y = 1.0 + 0.5 * yp;
+        muzzle.scale.z = 1.0 + 0.3 * yp;
+        muzzle.position.z = 0.38 - 0.04 * yp;
+        body.rotation.x = -0.1 * yp;
+        // Front paws stretch out slightly
+        legs[0].rig.rotation.x = 0.3 * yp;
+        legs[1].rig.rotation.x = 0.3 * yp;
+
+      } else if (state.idleAction === 'hiss') {
+        // Arch back, ears flatten, tail puffs up, tiny forward crouch
+        const hp = Math.sin(ap * Math.PI * 2) > 0 ? Math.sin(ap * Math.PI * 2) : 0;
+        body.rotation.x = -0.35 * hp;
+        body.position.y = 0.06 * hp;
+        // ears flatten back
+        earL.rotation.x = 0.55 * hp;
+        earR.rotation.x = 0.55 * hp;
+        // front legs spread wider (hiss crouch)
+        legs[0].rig.rotation.x = -0.2 * hp;
+        legs[0].rig.rotation.z =  0.2 * hp;
+        legs[1].rig.rotation.x = -0.2 * hp;
+        legs[1].rig.rotation.z = -0.2 * hp;
+
+      } else if (state.idleAction === 'pawWave') {
+        // Raise one front paw and wave
+        const wave = Math.sin(ap * Math.PI * 6);
+        legs[1].rig.rotation.x = -0.9 + wave * 0.25;
+        legs[1].rig.rotation.z = -0.5;
+        legs[1].knee.rotation.x = 1.2 - wave * 0.15;
+        headRig.rotation.y = 0.2;
       }
+
     } else {
       state.idleT = 0;
       state.idleAction = 'none';
       state.idleActionT = 0;
+      // reset muzzle scale in case yawn stretched it
+      muzzle.scale.set(1.05, 0.80, 0.85);
+      muzzle.position.z = 0.38;
     }
   } else if (!state.grounded && state.trickT <= 0) {
     // Airborne default: tuck legs up, slight arc
@@ -1828,79 +2090,191 @@ function catAnim(dt) {
     body.rotation.x = -state.vel.y * 0.02;
   }
 
-  // Flip trick animations (apply to body, in local space)
+  // Flip trick animations — phase-based with easing
   if (state.trickT > 0) {
-    const t = state.trickType;
-    const T = TRICKS[t];
+    const tk = state.trickType;
+    const T = TRICKS[tk];
     const p = 1 - (state.trickT / state.trickDur);
-    const angle = p * Math.PI * 2 * (T.turns || 1) * (T.dir || 1);
-    // reset body euler so compound rotations don't accumulate
+    // Easing helpers
+    const eio  = t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    const eIn  = t => t * t;
+    const eOut = t => t * (2 - t);
+    // Phase p in [0..1]; scale to turns
+    const rotP  = eio(p);
+    const angle = rotP * Math.PI * 2 * (T.turns || 1) * (T.dir || 1);
+    // Tuck factor: deep tuck at start/end, open at apex
+    const tuck  = 1.0 - Math.sin(p * Math.PI) * 0.6;  // 1.0→0.4→1.0
+
     body.rotation.set(0, 0, 0);
     body.position.set(0, 0, 0);
-    if (T.axis === 'x') body.rotation.x = angle;
-    else if (T.axis === 'z') body.rotation.z = angle;
-    else if (T.axis === 'y') body.rotation.y = angle;
-    else if (T.axis === 'cork') {
-      // Corkscrew: flip + twist simultaneously
+
+    if (T.axis === 'x') {
+      // Front flip / Back flip / Gainer / Double front
       body.rotation.x = angle;
-      body.rotation.y = angle * 1.0;
-    } else if (T.axis === 'td') {
-      // Touchdown raize: backflip then spring up — exaggerated rise
-      body.rotation.x = -angle;
-      body.position.y = Math.sin(p * Math.PI) * 0.5;
-    } else if (T.axis === 'cart') {
-      // Cartwheel full twist: z-axis cartwheel + y-twist
+      body.position.y = Math.sin(p * Math.PI) * 0.18;
+      // Tuck: legs tight in wind-up/land, slightly open at apex
+      for (let i = 0; i < 4; i++) {
+        legs[i].rig.rotation.x   = -1.1 * tuck;
+        legs[i].knee.rotation.x  =  1.5 * tuck;
+      }
+      // lean body into trick
+      body.rotation.z = (tk === 'gainer') ? Math.sin(p*Math.PI)*0.3 : 0;
+
+    } else if (T.axis === 'z') {
+      // Side flip — rotation around Z, body sways sideways
       body.rotation.z = angle;
-      body.rotation.y = angle * 1.0;
+      body.position.y = Math.sin(p * Math.PI) * 0.20;
+      cat.rotation.z += Math.sin(p * Math.PI) * 0.4;
+      for (let i = 0; i < 4; i++) {
+        const side = (i % 2 === 0) ? -1 : 1;
+        legs[i].rig.rotation.x  = -0.9 * tuck;
+        legs[i].rig.rotation.z  =  side * 0.5 * (1 - tuck);
+        legs[i].knee.rotation.x =  1.3 * tuck;
+      }
+
+    } else if (T.axis === 'cork') {
+      // Corkscrew — forward flip WHILE spinning around Y; body tilted ~45°
+      const tiltIn  = eIn(Math.min(1, p * 3));    // tilt in fast at start
+      const tiltOut = eOut(Math.max(0, p * 3 - 2)); // level out at end
+      const tilt    = Math.min(1, tiltIn) - tiltOut;
+      body.rotation.x = angle * 0.9;
+      body.rotation.y = angle * T.turns;
+      body.rotation.z = tilt * 1.0; // body leans sideways during cork
+      body.position.y = Math.sin(p * Math.PI) * 0.25;
+      for (let i = 0; i < 4; i++) {
+        legs[i].rig.rotation.x  = -1.0 * tuck;
+        legs[i].rig.rotation.z  = (i % 2 === 0 ? -1 : 1) * 0.4 * (1-tuck);
+        legs[i].knee.rotation.x =  1.4 * tuck;
+      }
+
+    } else if (T.axis === 'td') {
+      // Touchdown Raize — back flip with explosive upward surge mid-flight
+      const riseP = Math.max(0, (p - 0.45) * 1.8);
+      body.rotation.x = -angle;
+      body.position.y = Math.sin(p * Math.PI) * 0.35 + eOut(riseP) * 0.5;
+      // wind-up: arch back hard at p<0.2
+      body.rotation.z = (p < 0.25) ? -eIn(p / 0.25) * 0.35 : 0;
+      for (let i = 0; i < 4; i++) {
+        const spreadP = Math.max(0, p - 0.5) * 2;
+        legs[i].rig.rotation.x  = -0.9 * tuck + 0.6 * spreadP;
+        legs[i].rig.rotation.z  = (i % 2 === 0 ? -1 : 1) * 0.6 * spreadP;
+        legs[i].knee.rotation.x =  1.3 * tuck;
+      }
+
+    } else if (T.axis === 'cart') {
+      // Cartwheel full twist — side cartwheel (Z) + full Y twist
+      body.rotation.z = angle;
+      body.rotation.y = p * Math.PI * 2;
+      body.position.y = Math.abs(Math.sin(p * Math.PI)) * 0.18;
+      for (let i = 0; i < 4; i++) {
+        const side = (i < 2) ? -1 : 1;
+        legs[i].rig.rotation.x  = side * 0.5;
+        legs[i].rig.rotation.z  = (i % 2 === 0 ? -1 : 1) * 0.7;
+        legs[i].knee.rotation.x = 0.6;
+      }
+
     } else if (T.axis === 'btf') {
-      // Butterfly twist: horizontal body + twist (rotate around z and y)
-      body.rotation.x = Math.sin(p * Math.PI) * 0.9;  // lay flat mid-move
+      // Butterfly twist — lay horizontal at apex (X toward 90°), spin Y
+      const flatP   = Math.sin(p * Math.PI);   // 0→1→0 — how flat the body gets
+      body.rotation.x = flatP * (Math.PI * 0.5);   // lay sideways
       body.rotation.y = angle;
-      body.rotation.z = Math.sin(p * Math.PI * 2) * 0.3;
+      body.rotation.z = Math.sin(p * Math.PI * 2) * 0.4;
+      body.position.y = flatP * 0.30;
+      // Leading arm stretches out
+      legs[0].rig.rotation.x  = -0.4 - flatP * 0.6;
+      legs[0].rig.rotation.z  = flatP * 1.0;
+      legs[1].rig.rotation.x  = -0.4 - flatP * 0.6;
+      legs[1].rig.rotation.z  = -flatP * 1.0;
+      legs[2].rig.rotation.x  = -0.9 * tuck;
+      legs[3].rig.rotation.x  = -0.9 * tuck;
+      legs[2].knee.rotation.x = legs[3].knee.rotation.x = 1.2 * tuck;
+
     } else if (T.axis === 'dive') {
-      // 360 dive roll: forward flip + 360 yaw
-      body.rotation.x = angle;
+      // 360 Dive Roll — forward flip with full 360 yaw (diving sensation)
+      body.rotation.x = angle * 1.1;  // slightly over-rotated forward
       body.rotation.y = angle;
+      body.position.y = Math.sin(p * Math.PI) * 0.25;
+      // Arms stretched forward at launch
+      const stretchP = eOut(Math.max(0, 1 - p * 3));
+      legs[0].rig.rotation.x  = -1.2 * tuck + stretchP * 1.4;
+      legs[1].rig.rotation.x  = -1.2 * tuck + stretchP * 1.4;
+      legs[2].rig.rotation.x  = -0.9 * tuck;
+      legs[3].rig.rotation.x  = -0.9 * tuck;
+      legs[0].knee.rotation.x = 1.3 * tuck;
+      legs[1].knee.rotation.x = 1.3 * tuck;
+      legs[2].knee.rotation.x = 1.2 * tuck;
+      legs[3].knee.rotation.x = 1.2 * tuck;
+
     } else if (T.axis === 'flare') {
-      // Air flare: horizontal spin with shifting tilt
-      body.rotation.x = Math.sin(p * Math.PI) * 1.0;
+      // Air Flare — horizontal spin (Y), body tilted sideways, alternating legs
       body.rotation.y = angle;
-      body.rotation.z = Math.cos(p * Math.PI * 2) * 0.5;
+      body.rotation.x = Math.sin(p * Math.PI * 2) * 1.2;  // pump body up/down
+      body.rotation.z = Math.cos(p * Math.PI * T.turns * 2) * 0.7;
+      body.position.y = Math.max(0, Math.sin(p * Math.PI)) * 0.15;
+      // Alternating leg scissors
+      const cycle = p * Math.PI * T.turns * 2;
+      legs[0].rig.rotation.z =  Math.cos(cycle) * 1.0;
+      legs[1].rig.rotation.z = -Math.cos(cycle) * 1.0;
+      legs[2].rig.rotation.z =  Math.sin(cycle) * 0.8;
+      legs[3].rig.rotation.z = -Math.sin(cycle) * 0.8;
+      for (let i = 0; i < 4; i++) legs[i].knee.rotation.x = 0.3;
+
     } else if (T.axis === 'thomas') {
-      // Thomas flare: legs out, horizontal spin on y, tilt cycle on z
+      // Thomas Flare — same as air flare but body on back, legs cycling wide
+      body.rotation.x = eio(Math.min(1, p * 2)) * 1.4;  // tip onto back
       body.rotation.y = angle;
-      body.rotation.z = Math.sin(p * Math.PI * 2) * 0.7;
-      body.rotation.x = 0.4;
+      body.rotation.z = Math.sin(p * Math.PI * T.turns * 2) * 0.8;
+      body.position.y = -0.1 * Math.sin(p * Math.PI);
+      const cycle2 = p * Math.PI * T.turns * 2;
+      legs[0].rig.rotation.x =  Math.cos(cycle2) * 1.1;
+      legs[0].rig.rotation.z = -0.8;
+      legs[1].rig.rotation.x = -Math.cos(cycle2) * 1.1;
+      legs[1].rig.rotation.z =  0.8;
+      legs[2].rig.rotation.x =  Math.sin(cycle2) * 0.9;
+      legs[2].rig.rotation.z = -0.7;
+      legs[3].rig.rotation.x = -Math.sin(cycle2) * 0.9;
+      legs[3].rig.rotation.z =  0.7;
+      for (let i = 0; i < 4; i++) legs[i].knee.rotation.x = 0.2;
+
     } else if (T.axis === 'mill') {
-      // Windmill: shoulder/back on ground, legs cycling — body on its back rotating
-      body.rotation.x = 1.2;  // on back
+      // Windmill — back on "ground" (low position), fast Y spin, legs like helicopter
+      body.rotation.x = eio(Math.min(1, p * 2.5)) * Math.PI * 0.65; // tip onto back
       body.rotation.y = angle;
-      body.position.y = -0.2;
-    }
-    // limbs tuck tighter for most
-    const legsOut = (T.axis === 'thomas' || T.axis === 'mill' || T.axis === 'flare');
-    for (let i = 0; i < 4; i++) {
-      if (legsOut) {
-        // legs splayed out
-        const spread = (i < 2 ? 1 : -1);
-        legs[i].rig.rotation.x = spread * 0.2;
-        legs[i].rig.rotation.z = (i % 2 === 0 ? -1 : 1) * 0.9;
-        legs[i].knee.rotation.x = 0.1;
-      } else {
-        legs[i].rig.rotation.x = -1.0;
-        legs[i].knee.rotation.x = 1.4;
+      body.position.y = -0.18 * Math.min(1, p * 3);
+      const mill = p * Math.PI * T.turns * 2;
+      legs[0].rig.rotation.z  =  Math.cos(mill) * 1.2;
+      legs[0].rig.rotation.x  = -Math.sin(mill) * 0.4;
+      legs[1].rig.rotation.z  = -Math.cos(mill) * 1.2;
+      legs[1].rig.rotation.x  =  Math.sin(mill) * 0.4;
+      legs[2].rig.rotation.z  =  Math.sin(mill) * 1.0;
+      legs[2].rig.rotation.x  =  Math.cos(mill) * 0.4;
+      legs[3].rig.rotation.z  = -Math.sin(mill) * 1.0;
+      legs[3].rig.rotation.x  = -Math.cos(mill) * 0.4;
+      for (let i = 0; i < 4; i++) legs[i].knee.rotation.x = 0.3;
+
+    } else {
+      // Fallback (wallback, wallflip, etc.)
+      body.rotation.x = angle;
+      for (let i = 0; i < 4; i++) {
+        legs[i].rig.rotation.x  = -1.0 * tuck;
+        legs[i].knee.rotation.x =  1.4 * tuck;
       }
     }
+
+    // Head counter-rotation so face stays roughly forward
+    headRig.rotation.x += Math.sin(p * Math.PI) * -0.15;
   }
 
-  // Rolling (ground) — fixed direction: forward roll = top goes forward (+x rotation)
+  // Rolling (ground) — forward roll with proper arc
   if (state.rollT > 0) {
     const p = 1 - (state.rollT / TRICKS.roll.dur);
-    body.rotation.x = p * Math.PI * 2;
-    body.position.y = Math.sin(p * Math.PI) * 0.25;
+    const eio2 = t => t < 0.5 ? 2*t*t : -1+(4-2*t)*t;
+    body.rotation.x = eio2(p) * Math.PI * 2;
+    body.position.y = Math.sin(p * Math.PI) * 0.30;
+    cat.rotation.z = Math.sin(p * Math.PI * 2) * 0.1;
     for (let i = 0; i < 4; i++) {
-      legs[i].rig.rotation.x = -0.8;
-      legs[i].knee.rotation.x = 1.3;
+      legs[i].rig.rotation.x  = -0.9;
+      legs[i].knee.rotation.x =  1.4;
     }
   }
 
@@ -1928,10 +2302,10 @@ function catAnim(dt) {
   earL.rotation.x += (targetEarX - earL.rotation.x) * Math.min(1, 8 * dt);
   earR.rotation.x += (targetEarX - earR.rotation.x) * Math.min(1, 8 * dt);
 
-  // Head — gentle sway, look slightly where camera looks
+  // Head — gentle sway added on top of idle/trick pose
   const head_yaw = Math.sin(state.time * 0.6) * 0.06;
-  headRig.rotation.y = head_yaw;
-  headRig.rotation.x = -camPitch * 0.15 + (!state.grounded ? 0.08 : 0);
+  headRig.rotation.y += head_yaw;
+  headRig.rotation.x += -camPitch * 0.15 + (!state.grounded ? 0.08 : 0);
 
   // Eye blink (periodic + idle action trigger)
   const blinkBase = (Math.sin(state.time * 0.8) > 0.995) ? 0.15 : 1.0;
