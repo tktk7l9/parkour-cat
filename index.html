@@ -846,6 +846,36 @@ function addRail(x, z, len, h) {
 addRail(0, 35, 10, 3.0);
 addRail(0, 48, 10, 3.0);
 
+/* Camera spring-arm obstacle avoidance — AABB ray check */
+function cameraAvoidObstacle(from, to) {
+  const dir = new THREE.Vector3().subVectors(to, from);
+  const dist = dir.length();
+  if (dist < 0.1) return to.clone();
+  const dn = dir.clone().divideScalar(dist);
+  let hitT = dist;
+  for (const s of SOLIDS) {
+    if (s.max.y < 2.0) continue;
+    let tmin = 0, tmax = dist, hit = true;
+    for (const [o, d, lo, hi] of [
+      [from.x, dn.x, s.min.x, s.max.x],
+      [from.y, dn.y, s.min.y, s.max.y],
+      [from.z, dn.z, s.min.z, s.max.z],
+    ]) {
+      if (Math.abs(d) < 1e-9) { if (o < lo - 0.1 || o > hi + 0.1) { hit = false; break; } continue; }
+      const t1 = (lo - 0.1 - o) / d, t2 = (hi + 0.1 - o) / d;
+      tmin = Math.max(tmin, Math.min(t1, t2));
+      tmax = Math.min(tmax, Math.max(t1, t2));
+      if (tmin > tmax) { hit = false; break; }
+    }
+    if (hit && tmin < hitT) hitT = tmin;
+  }
+  if (hitT < dist) {
+    const safeT = Math.max(0.6, hitT - 0.35);
+    return new THREE.Vector3().addVectors(from, dn.multiplyScalar(safeT));
+  }
+  return to.clone();
+}
+
 /* ================================================================
    CAT MODEL (much cuter)
 ================================================================ */
@@ -879,23 +909,23 @@ const clawMat = new THREE.MeshStandardMaterial({ color: 0xf0e3c6, roughness: 0.5
 const body = new THREE.Group();
 cat.add(body);
 
-/* Torso — two spheres for a plump silhouette */
-const chest = new THREE.Mesh(new THREE.SphereGeometry(0.48, 20, 14), furMat);
-chest.scale.set(1.0, 0.95, 1.2);
-chest.position.set(0, 0.65, 0.55);
+/* Torso — two spheres for a chubby silhouette */
+const chest = new THREE.Mesh(new THREE.SphereGeometry(0.52, 20, 14), furMat);
+chest.scale.set(1.0, 1.0, 1.25);
+chest.position.set(0, 0.68, 0.52);
 chest.castShadow = true;
 body.add(chest);
 
-const rump = new THREE.Mesh(new THREE.SphereGeometry(0.52, 20, 14), furMat);
-rump.scale.set(1.0, 0.95, 1.2);
-rump.position.set(0, 0.65, -0.45);
+const rump = new THREE.Mesh(new THREE.SphereGeometry(0.56, 20, 14), furMat);
+rump.scale.set(1.0, 0.98, 1.22);
+rump.position.set(0, 0.66, -0.46);
 rump.castShadow = true;
 body.add(rump);
 
 /* Belly (white) */
-const belly = new THREE.Mesh(new THREE.SphereGeometry(0.4, 14, 10), whiteMat);
-belly.scale.set(0.88, 0.7, 1.9);
-belly.position.set(0, 0.5, 0.05);
+const belly = new THREE.Mesh(new THREE.SphereGeometry(0.44, 14, 10), whiteMat);
+belly.scale.set(0.88, 0.68, 1.95);
+belly.position.set(0, 0.50, 0.04);
 belly.castShadow = true;
 body.add(belly);
 
@@ -919,14 +949,14 @@ for (let i = 0; i < 5; i++) {
   body.add(t);
 });
 
-/* Neck + Head rig */
+/* Neck + Head rig — raised for bigger head */
 const headRig = new THREE.Group();
-headRig.position.set(0, 0.95, 1.0);
+headRig.position.set(0, 1.00, 1.02);
 body.add(headRig);
 
-/* Head — wider than tall, classic kitten shape */
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.40, 22, 18), furMat);
-head.scale.set(1.15, 1.0, 1.0);
+/* Head — rounder, bigger kitten */
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.46, 24, 18), furMat);
+head.scale.set(1.22, 1.10, 1.04);
 head.castShadow = true;
 headRig.add(head);
 
@@ -939,10 +969,19 @@ for (let i = 0; i < 3; i++) {
 
 /* Cheeks (puffy) */
 for (const sx of [-1, 1]) {
-  const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.18, 12, 10), whiteMat);
-  cheek.position.set(sx * 0.18, -0.04, 0.28);
-  cheek.scale.set(0.9, 0.8, 0.7);
+  const cheek = new THREE.Mesh(new THREE.SphereGeometry(0.20, 12, 10), whiteMat);
+  cheek.position.set(sx * 0.20, -0.04, 0.30);
+  cheek.scale.set(0.92, 0.82, 0.72);
   headRig.add(cheek);
+}
+
+/* Blush marks */
+const blushMat = new THREE.MeshStandardMaterial({ color: 0xff8fa8, transparent: true, opacity: 0.32, roughness: 1.0 });
+for (const sx of [-1, 1]) {
+  const blush = new THREE.Mesh(new THREE.SphereGeometry(0.13, 12, 8), blushMat);
+  blush.position.set(sx * 0.26, -0.06, 0.34);
+  blush.scale.set(0.85, 0.55, 0.4);
+  headRig.add(blush);
 }
 
 /* Muzzle (white) */
@@ -974,61 +1013,58 @@ headRig.add(noseC);
   headRig.add(new THREE.Line(p, mouthMat));
 }
 
-/* Ears — triangular with pink inside */
+/* Ears — rounder, taller, cuter */
 function mkEar(x) {
   const root = new THREE.Group();
-  root.position.set(x, 0.33, -0.04);
-  root.rotation.z = -x * 0.22;
-  root.rotation.x = -0.1;
+  root.position.set(x * 1.05, 0.36, -0.05);
+  root.rotation.z = -x * 0.20;
+  root.rotation.x = -0.12;
   headRig.add(root);
-  const e = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.32, 12), furMat);
-  e.position.y = 0.16;
+  const e = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.38, 14), furMat);
+  e.position.y = 0.19;
   e.castShadow = true;
   root.add(e);
-  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.24, 10), earInnerMat);
-  inner.position.set(0, 0.13, 0.04);
+  const inner = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.28, 12), earInnerMat);
+  inner.position.set(0, 0.16, 0.05);
   root.add(inner);
-  // dark tip
-  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.025, 6, 6), stripeMat);
-  tip.position.y = 0.33;
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 6), stripeMat);
+  tip.position.y = 0.40;
   root.add(tip);
   return root;
 }
 const earL = mkEar(-0.22);
 const earR = mkEar( 0.22);
 
-/* Eyes — big anime-style with sparkle */
+/* Eyes — big anime with triple sparkle */
 function mkEye(x) {
   const g = new THREE.Group();
-  g.position.set(x, 0.08, 0.30);
+  g.position.set(x * 1.05, 0.10, 0.32);
   headRig.add(g);
-  const w = new THREE.Mesh(new THREE.SphereGeometry(0.10, 14, 10), eyeWhiteMat);
-  w.scale.set(1.0, 1.0, 0.55);
+  const w = new THREE.Mesh(new THREE.SphereGeometry(0.125, 16, 12), eyeWhiteMat);
+  w.scale.set(1.0, 1.08, 0.52);
   g.add(w);
-  const e = new THREE.Mesh(new THREE.SphereGeometry(0.085, 14, 10), eyeMat);
-  e.position.z = 0.035;
-  e.scale.set(1.0, 1.0, 0.55);
+  const e = new THREE.Mesh(new THREE.SphereGeometry(0.108, 16, 12), eyeMat);
+  e.position.z = 0.038;
+  e.scale.set(1.0, 1.08, 0.52);
   g.add(e);
-  const p = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.06, 4, 6), pupilMat);
-  p.position.set(0, 0, 0.08);
+  const p = new THREE.Mesh(new THREE.CapsuleGeometry(0.015, 0.072, 4, 8), pupilMat);
+  p.position.set(0, 0, 0.092);
   g.add(p);
-  // sparkle
-  const sp = new THREE.Mesh(
-    new THREE.SphereGeometry(0.022, 8, 6),
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
-  );
-  sp.position.set(x > 0 ? 0.025 : -0.025, 0.03, 0.095);
-  g.add(sp);
-  const sp2 = new THREE.Mesh(
-    new THREE.SphereGeometry(0.01, 6, 6),
-    new THREE.MeshBasicMaterial({ color: 0xffffff })
-  );
-  sp2.position.set(x > 0 ? -0.015 : 0.015, -0.035, 0.09);
+  // three sparkle highlights
+  const spMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  const sp1 = new THREE.Mesh(new THREE.SphereGeometry(0.030, 8, 6), spMat);
+  sp1.position.set(x > 0 ? 0.030 : -0.030, 0.038, 0.108);
+  g.add(sp1);
+  const sp2 = new THREE.Mesh(new THREE.SphereGeometry(0.014, 6, 6), spMat);
+  sp2.position.set(x > 0 ? -0.018 : 0.018, -0.040, 0.103);
   g.add(sp2);
+  const sp3 = new THREE.Mesh(new THREE.SphereGeometry(0.009, 5, 5), spMat);
+  sp3.position.set(x > 0 ? 0.042 : -0.042, -0.018, 0.104);
+  g.add(sp3);
   return g;
 }
-const eyeL = mkEye(-0.15);
-const eyeR = mkEye( 0.15);
+const eyeL = mkEye(-0.16);
+const eyeR = mkEye( 0.16);
 
 /* Whiskers */
 {
@@ -1108,13 +1144,31 @@ const tailSegs = [];
     tailSegs.push(seg);
     parent = seg;
   }
-  // white tail tip
-  const tip = new THREE.Mesh(
-    new THREE.SphereGeometry(0.08, 10, 8),
-    whiteMat
-  );
-  tip.position.z = -0.08;
+  // fluffy white tail tip
+  const tipMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1.0 });
+  const tip = new THREE.Mesh(new THREE.SphereGeometry(0.14, 12, 10), tipMat);
+  tip.position.z = -0.10;
   tailSegs[tailSegs.length - 1].add(tip);
+  // extra fluff layers
+  for (let fi = 0; fi < 3; fi++) {
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.09 + fi * 0.015, 8, 6), tipMat);
+    f.position.set((fi - 1) * 0.06, (fi % 2 === 0 ? 0.05 : -0.05), -0.06);
+    tailSegs[tailSegs.length - 1].add(f);
+  }
+}
+
+/* Collar + bell */
+{
+  const collarMat = new THREE.MeshStandardMaterial({ color: 0xe03050, roughness: 0.5, metalness: 0.1 });
+  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.30, 0.048, 8, 28), collarMat);
+  collar.position.set(0, 0.78, 0.42);
+  collar.rotation.x = Math.PI / 2 - 0.28;
+  body.add(collar);
+  const bellMat = new THREE.MeshStandardMaterial({ color: 0xffd700, roughness: 0.15, metalness: 0.9, emissive: 0xaa8800, emissiveIntensity: 0.18 });
+  const bell = new THREE.Mesh(new THREE.SphereGeometry(0.068, 10, 8), bellMat);
+  bell.scale.y = 1.15;
+  bell.position.set(0, 0.60, 0.69);
+  body.add(bell);
 }
 
 /* Cat collision sized */
@@ -2088,21 +2142,23 @@ function tick() {
     if (state.comboTimer <= 0) { state.combo = 1; document.getElementById('combo').textContent = '×1'; }
   }
 
-  /* Apply transform */
-  cat.position.copy(state.pos);
+  /* Apply transform — visual offset so paws sit on ground, not below it */
+  cat.position.set(state.pos.x, state.pos.y + 0.28, state.pos.z);
   cat.rotation.y = state.facing;
 
   const horizSpeed = Math.hypot(state.vel.x, state.vel.z);
   state.moveSpeed = Math.min(1.4, horizSpeed / baseSpeed);
   catAnim(dt);
 
-  /* Camera follow */
+  /* Camera follow with obstacle avoidance */
   const camDist = 6.8;
   const camH = 2.4 + Math.sin(camPitch) * 2.5;
   const cx = state.pos.x - Math.sin(camYaw) * Math.cos(camPitch) * camDist;
   const cz = state.pos.z - Math.cos(camYaw) * Math.cos(camPitch) * camDist;
   const cy = state.pos.y + camH;
-  camera.position.lerp(new THREE.Vector3(cx, cy, cz), 1 - Math.pow(0.001, dt));
+  const catHead = new THREE.Vector3(state.pos.x, state.pos.y + 1.3, state.pos.z);
+  const camSafe = cameraAvoidObstacle(catHead, new THREE.Vector3(cx, cy, cz));
+  camera.position.lerp(camSafe, 1 - Math.pow(0.001, dt));
   camera.lookAt(state.pos.x, state.pos.y + 1.1, state.pos.z);
 
   /* Fish pickup */
