@@ -129,6 +129,97 @@
   #lastTrickLog h4 { margin: 0 0 4px; font-size: 10px; letter-spacing: 0.15em; color: #9aa3ad; font-weight: 500; text-transform: uppercase; }
   #lastTrickLog .entry { color: #e0d4b8; font-weight: 600; font-size: 13px; letter-spacing: 0.02em;}
   #lastTrickLog .entry:not(:first-child) { color: #8a8575; font-weight: 400; font-size: 11px; }
+
+  /* ── Mobile Virtual Controls ── */
+  #mobileControls { display: none; position: fixed; inset: 0; z-index: 7; pointer-events: none; }
+  @media (pointer: coarse) {
+    #mobileControls { display: block; }
+    #help { display: none; }
+    #crosshair { display: none; }
+    #lastTrickLog { display: none; }
+    #speedbar { bottom: 200px; width: 160px; }
+    .tag { padding: 6px 10px; }
+    .tag .v { font-size: 14px; }
+    .tag .row { gap: 12px; }
+    #trickText { font-size: 30px; }
+    #startOverlay .card { padding: 22px 18px; max-width: 92vw; }
+    #startOverlay h1 { font-size: 28px; }
+    #startOverlay .controls-grid { display: none; }
+  }
+
+  #joystickZone {
+    position: absolute; left: 0; bottom: 0;
+    width: 46%; height: 210px;
+    pointer-events: auto;
+  }
+  #joystickBase {
+    position: absolute; width: 96px; height: 96px;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.18);
+    opacity: 0; transition: opacity 0.1s;
+  }
+  #joystickThumb {
+    position: absolute; width: 46px; height: 46px;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: rgba(255,210,120,0.72);
+    border: 2px solid rgba(255,200,100,0.9);
+    box-shadow: 0 0 14px rgba(255,180,80,0.45);
+  }
+  #camZone {
+    position: absolute; right: 0; top: 0;
+    width: 54%; height: calc(100% - 210px);
+    pointer-events: auto;
+  }
+  #actionArea {
+    position: absolute; right: 0; bottom: 0;
+    width: 54%; height: 210px;
+    display: flex; flex-direction: column;
+    align-items: flex-end; justify-content: flex-end;
+    gap: 10px; padding: 14px 16px; box-sizing: border-box;
+    pointer-events: none;
+  }
+  #trickRow {
+    display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end;
+    pointer-events: auto;
+  }
+  .trick-btn {
+    background: rgba(14,17,22,0.72);
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 9px; color: #e0d4b8;
+    font-size: 12px; font-weight: 600;
+    padding: 8px 11px; pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+    letter-spacing: 0.02em;
+  }
+  .trick-btn:active { background: rgba(244,165,80,0.28); border-color: #f4a550; color: #ffd98a; }
+  #mainBtns {
+    display: flex; gap: 14px; align-items: center; pointer-events: auto;
+  }
+  #dashBtn {
+    width: 68px; height: 68px; border-radius: 50%;
+    background: rgba(14,17,22,0.72);
+    border: 2px solid rgba(255,255,255,0.18);
+    color: #9aa3ad; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.08em; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  #dashBtn.held { background: rgba(255,100,50,0.32); border-color: #ff7a4d; color: #ff9a6d; }
+  #jumpBtn {
+    width: 90px; height: 90px; border-radius: 50%;
+    background: linear-gradient(170deg, rgba(255,217,138,0.32), rgba(244,165,80,0.32));
+    border: 2px solid rgba(255,180,80,0.5);
+    color: #ffd98a; font-size: 13px; font-weight: 800;
+    letter-spacing: 0.07em; cursor: pointer;
+    box-shadow: 0 0 22px rgba(244,165,80,0.18);
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  #jumpBtn:active { background: linear-gradient(170deg,rgba(255,217,138,0.6),rgba(244,165,80,0.6)); }
 </style>
 </head>
 <body>
@@ -170,6 +261,27 @@
   <div><kbd>N</kbd>エアフレア <kbd>M</kbd>トーマス <kbd>V</kbd>ウィンドミル</div>
   <div style="margin-top:6px;color:#9aa3ad;font-size:10px;letter-spacing:0.1em;text-transform:uppercase">Ground</div>
   <div><kbd>C</kbd>受け身 <kbd>Q</kbd>プレシジョン</div>
+</div>
+
+<div id="mobileControls">
+  <div id="joystickZone">
+    <div id="joystickBase"><div id="joystickThumb"></div></div>
+  </div>
+  <div id="camZone"></div>
+  <div id="actionArea">
+    <div id="trickRow">
+      <button class="trick-btn" data-trick="frontflip">前宙</button>
+      <button class="trick-btn" data-trick="backflip">後宙</button>
+      <button class="trick-btn" data-trick="sideflip">側宙</button>
+      <button class="trick-btn" data-trick="corkscrew">コーク</button>
+      <button class="trick-btn" data-trick="butterfly">バタ</button>
+      <button class="trick-btn" data-trick="roll">受け身</button>
+    </div>
+    <div id="mainBtns">
+      <button id="dashBtn">DASH</button>
+      <button id="jumpBtn">JUMP</button>
+    </div>
+  </div>
 </div>
 
 <div id="startOverlay">
@@ -2085,6 +2197,132 @@ function tick() {
 }
 
 tick();
+
+/* ================================================================
+   MOBILE / TOUCH CONTROLS
+================================================================ */
+(function () {
+  if (!('ontouchstart' in window) && navigator.maxTouchPoints === 0) return;
+
+  const joyZone  = document.getElementById('joystickZone');
+  const joyBase  = document.getElementById('joystickBase');
+  const joyThumb = document.getElementById('joystickThumb');
+  const camZone  = document.getElementById('camZone');
+  const jumpBtn  = document.getElementById('jumpBtn');
+  const dashBtn  = document.getElementById('dashBtn');
+
+  /* -- Joystick -- */
+  const joy = { active: false, id: null, ox: 0, oy: 0, dx: 0, dy: 0 };
+  const MAX_R = 44;
+  const DEAD  = 10;
+
+  function applyJoy() {
+    keys['KeyW'] = keys['KeyA'] = keys['KeyS'] = keys['KeyD'] = false;
+    if (!joy.active) return;
+    const len = Math.hypot(joy.dx, joy.dy);
+    if (len < DEAD) return;
+    const nx = joy.dx / len, ny = joy.dy / len;
+    if (ny < -0.3) keys['KeyW'] = true;
+    if (ny >  0.3) keys['KeyS'] = true;
+    if (nx < -0.3) keys['KeyA'] = true;
+    if (nx >  0.3) keys['KeyD'] = true;
+  }
+
+  joyZone.addEventListener('touchstart', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (joy.active) continue;
+      joy.active = true; joy.id = t.identifier;
+      joy.ox = t.clientX; joy.oy = t.clientY;
+      joy.dx = 0; joy.dy = 0;
+      const r = joyZone.getBoundingClientRect();
+      joyBase.style.left = (t.clientX - r.left) + 'px';
+      joyBase.style.top  = (t.clientY - r.top)  + 'px';
+      joyBase.style.opacity = '1';
+      joyThumb.style.transform = 'translate(-50%,-50%)';
+    }
+  }, { passive: false });
+
+  joyZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== joy.id) continue;
+      joy.dx = t.clientX - joy.ox;
+      joy.dy = t.clientY - joy.oy;
+      const len = Math.hypot(joy.dx, joy.dy);
+      const cl  = Math.min(len, MAX_R);
+      const nx  = len > 0 ? joy.dx / len : 0;
+      const ny  = len > 0 ? joy.dy / len : 0;
+      joyThumb.style.transform =
+        `translate(calc(-50% + ${nx*cl}px), calc(-50% + ${ny*cl}px))`;
+      applyJoy();
+    }
+  }, { passive: false });
+
+  function joyEnd(e) {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== joy.id) continue;
+      joy.active = false; joy.id = null; joy.dx = 0; joy.dy = 0;
+      joyBase.style.opacity = '0';
+      joyThumb.style.transform = 'translate(-50%,-50%)';
+      applyJoy();
+    }
+  }
+  joyZone.addEventListener('touchend',    joyEnd);
+  joyZone.addEventListener('touchcancel', joyEnd);
+
+  /* -- Camera drag (right upper zone) -- */
+  const cam = { active: false, id: null, lx: 0, ly: 0 };
+
+  camZone.addEventListener('touchstart', e => {
+    for (const t of e.changedTouches) {
+      if (cam.active) continue;
+      cam.active = true; cam.id = t.identifier;
+      cam.lx = t.clientX; cam.ly = t.clientY;
+    }
+  }, { passive: true });
+
+  camZone.addEventListener('touchmove', e => {
+    e.preventDefault();
+    for (const t of e.changedTouches) {
+      if (t.identifier !== cam.id) continue;
+      camYaw   -= (t.clientX - cam.lx) * 0.004;
+      camPitch -= (t.clientY - cam.ly) * 0.003;
+      camPitch  = Math.max(-0.35, Math.min(0.9, camPitch));
+      cam.lx = t.clientX; cam.ly = t.clientY;
+    }
+  }, { passive: false });
+
+  function camEnd(e) {
+    for (const t of e.changedTouches) {
+      if (t.identifier !== cam.id) continue;
+      cam.active = false; cam.id = null;
+    }
+  }
+  camZone.addEventListener('touchend',    camEnd);
+  camZone.addEventListener('touchcancel', camEnd);
+
+  /* -- Jump -- */
+  jumpBtn.addEventListener('touchstart', e => {
+    e.preventDefault(); requestJump();
+  }, { passive: false });
+
+  /* -- Dash (hold) -- */
+  dashBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    keys['ShiftLeft'] = true; dashBtn.classList.add('held');
+  }, { passive: false });
+  const releaseDash = () => { keys['ShiftLeft'] = false; dashBtn.classList.remove('held'); };
+  dashBtn.addEventListener('touchend',    releaseDash);
+  dashBtn.addEventListener('touchcancel', releaseDash);
+
+  /* -- Trick buttons -- */
+  document.querySelectorAll('.trick-btn').forEach(btn => {
+    btn.addEventListener('touchstart', e => {
+      e.preventDefault(); requestTrick(btn.dataset.trick);
+    }, { passive: false });
+  });
+})();
 </script>
 
 </body>
