@@ -132,94 +132,124 @@
 
   /* ── Mobile Virtual Controls ── */
   #mobileControls { display: none; position: fixed; inset: 0; z-index: 7; pointer-events: none; }
+
   @media (pointer: coarse) {
     #mobileControls { display: block; }
     #help { display: none; }
     #crosshair { display: none; }
     #lastTrickLog { display: none; }
-    #speedbar { bottom: 200px; width: 160px; }
-    .tag { padding: 6px 10px; }
-    .tag .v { font-size: 14px; }
-    .tag .row { gap: 12px; }
-    #trickText { font-size: 30px; }
-    #startOverlay .card { padding: 22px 18px; max-width: 92vw; }
-    #startOverlay h1 { font-size: 28px; }
+    #speedbar { bottom: 260px; width: 140px; }
+    .tag { padding: 5px 8px; }
+    .tag .v { font-size: 13px; }
+    .tag .row { gap: 10px; }
+    #trickText { font-size: 26px; top: 28%; }
+    #startOverlay .card { padding: 20px 16px; max-width: 94vw; }
+    #startOverlay h1 { font-size: 26px; }
     #startOverlay .controls-grid { display: none; }
+    #startOverlay p { font-size: 12px; }
   }
 
+  /* Camera drag — full screen above the control bar */
+  #camZone {
+    position: absolute; inset: 0; bottom: 250px;
+    pointer-events: auto;
+  }
+  /* Semi-visible hint for camera zone */
+  #camZone::after {
+    content: '👆 スワイプでカメラ回転';
+    position: absolute; top: 12px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; color: rgba(255,255,255,0.28); letter-spacing: 0.08em;
+    pointer-events: none; white-space: nowrap;
+  }
+
+  /* Left joystick zone */
   #joystickZone {
     position: absolute; left: 0; bottom: 0;
-    width: 46%; height: 210px;
+    width: 46%; height: 250px;
     pointer-events: auto;
   }
   #joystickBase {
-    position: absolute; width: 96px; height: 96px;
+    position: absolute; width: 104px; height: 104px;
     left: 50%; top: 50%; transform: translate(-50%, -50%);
     border-radius: 50%;
-    background: rgba(255,255,255,0.07);
-    border: 2px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.16);
     opacity: 0; transition: opacity 0.1s;
   }
   #joystickThumb {
-    position: absolute; width: 46px; height: 46px;
+    position: absolute; width: 52px; height: 52px;
     left: 50%; top: 50%; transform: translate(-50%, -50%);
     border-radius: 50%;
-    background: rgba(255,210,120,0.72);
-    border: 2px solid rgba(255,200,100,0.9);
-    box-shadow: 0 0 14px rgba(255,180,80,0.45);
+    background: rgba(255,210,120,0.75);
+    border: 2px solid rgba(255,200,100,0.95);
+    box-shadow: 0 0 16px rgba(255,180,80,0.5);
   }
-  #camZone {
-    position: absolute; right: 0; top: 0;
-    width: 54%; height: calc(100% - 210px);
-    pointer-events: auto;
-  }
+
+  /* Right action area */
   #actionArea {
     position: absolute; right: 0; bottom: 0;
-    width: 54%; height: 210px;
-    display: flex; flex-direction: column;
-    align-items: flex-end; justify-content: flex-end;
-    gap: 10px; padding: 14px 16px; box-sizing: border-box;
+    width: 54%; height: 250px;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    gap: 8px; padding: 12px 14px 14px; box-sizing: border-box;
     pointer-events: none;
   }
+
+  /* Trick button grid */
   #trickRow {
-    display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end;
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 6px; align-content: center;
     pointer-events: auto;
   }
   .trick-btn {
-    background: rgba(14,17,22,0.72);
-    border: 1px solid rgba(255,255,255,0.14);
-    border-radius: 9px; color: #e0d4b8;
-    font-size: 12px; font-weight: 600;
-    padding: 8px 11px; pointer-events: auto;
+    background: rgba(14,17,22,0.75);
+    border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 10px; color: #e0d4b8;
+    font-size: 12px; font-weight: 700;
+    padding: 10px 4px; text-align: center;
     -webkit-tap-highlight-color: transparent;
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-    letter-spacing: 0.02em;
+    letter-spacing: 0.01em; pointer-events: auto;
+    line-height: 1.2;
   }
-  .trick-btn:active { background: rgba(244,165,80,0.28); border-color: #f4a550; color: #ffd98a; }
+  .trick-btn:active { background: rgba(244,165,80,0.32); border-color: #f4a550; color: #ffd98a; transform: scale(0.95); }
+
+  /* Bottom action row */
   #mainBtns {
-    display: flex; gap: 14px; align-items: center; pointer-events: auto;
+    display: flex; gap: 10px; align-items: flex-end; justify-content: flex-end;
+    pointer-events: auto;
   }
+  #bipedBtn {
+    width: 58px; height: 58px; border-radius: 14px;
+    background: rgba(14,17,22,0.75);
+    border: 2px solid rgba(160,200,255,0.3);
+    color: #90b8e8; font-size: 10px; font-weight: 700;
+    letter-spacing: 0.04em; line-height: 1.3; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  }
+  #bipedBtn.active { background: rgba(80,140,255,0.28); border-color: #80b4ff; color: #c0d8ff; }
   #dashBtn {
-    width: 68px; height: 68px; border-radius: 50%;
-    background: rgba(14,17,22,0.72);
+    width: 64px; height: 64px; border-radius: 50%;
+    background: rgba(14,17,22,0.75);
     border: 2px solid rgba(255,255,255,0.18);
     color: #9aa3ad; font-size: 11px; font-weight: 700;
-    letter-spacing: 0.08em; cursor: pointer;
+    letter-spacing: 0.06em; cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   }
   #dashBtn.held { background: rgba(255,100,50,0.32); border-color: #ff7a4d; color: #ff9a6d; }
   #jumpBtn {
-    width: 90px; height: 90px; border-radius: 50%;
-    background: linear-gradient(170deg, rgba(255,217,138,0.32), rgba(244,165,80,0.32));
-    border: 2px solid rgba(255,180,80,0.5);
-    color: #ffd98a; font-size: 13px; font-weight: 800;
-    letter-spacing: 0.07em; cursor: pointer;
-    box-shadow: 0 0 22px rgba(244,165,80,0.18);
+    width: 96px; height: 96px; border-radius: 50%;
+    background: linear-gradient(160deg, rgba(255,217,138,0.35), rgba(244,165,80,0.35));
+    border: 2px solid rgba(255,185,80,0.55);
+    color: #ffd98a; font-size: 14px; font-weight: 900;
+    letter-spacing: 0.06em; cursor: pointer;
+    box-shadow: 0 0 24px rgba(244,165,80,0.22);
     -webkit-tap-highlight-color: transparent;
     backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   }
-  #jumpBtn:active { background: linear-gradient(170deg,rgba(255,217,138,0.6),rgba(244,165,80,0.6)); }
+  #jumpBtn:active { background: linear-gradient(160deg,rgba(255,217,138,0.65),rgba(244,165,80,0.65)); transform: scale(0.96); }
 </style>
 </head>
 <body>
@@ -261,13 +291,15 @@
   <div><kbd>N</kbd>エアフレア <kbd>M</kbd>トーマス <kbd>V</kbd>ウィンドミル</div>
   <div style="margin-top:6px;color:#9aa3ad;font-size:10px;letter-spacing:0.1em;text-transform:uppercase">Ground</div>
   <div><kbd>C</kbd>受け身 <kbd>Q</kbd>プレシジョン</div>
+  <div style="margin-top:6px;color:#9aa3ad;font-size:10px;letter-spacing:0.1em;text-transform:uppercase">Mode</div>
+  <div><kbd>P</kbd>二足歩行 ON/OFF</div>
 </div>
 
 <div id="mobileControls">
+  <div id="camZone"></div>
   <div id="joystickZone">
     <div id="joystickBase"><div id="joystickThumb"></div></div>
   </div>
-  <div id="camZone"></div>
   <div id="actionArea">
     <div id="trickRow">
       <button class="trick-btn" data-trick="frontflip">前宙</button>
@@ -275,9 +307,12 @@
       <button class="trick-btn" data-trick="sideflip">側宙</button>
       <button class="trick-btn" data-trick="corkscrew">コーク</button>
       <button class="trick-btn" data-trick="butterfly">バタ</button>
+      <button class="trick-btn" data-trick="diveroll">ダイブ</button>
       <button class="trick-btn" data-trick="roll">受け身</button>
+      <button class="trick-btn" data-trick="gainer">ゲイナー</button>
     </div>
     <div id="mainBtns">
+      <button id="bipedBtn">二足<br>歩行</button>
       <button id="dashBtn">DASH</button>
       <button id="jumpBtn">JUMP</button>
     </div>
@@ -455,6 +490,7 @@ const TREES  = []; // {pos, radius, height}
   slab.position.set(0, 0.11, 0);
   slab.receiveShadow = true;
   WORLD.add(slab);
+  SOLIDS.push({ min: new THREE.Vector3(-40, 0, -100), max: new THREE.Vector3(40, 0.21, 100) });
   // cobble pattern via dark grid
   for (let z = -100; z <= 100; z += 4) {
     const line = new THREE.Mesh(
@@ -500,12 +536,16 @@ function makeBuilding(x, z, w, d, h, palette) {
   body.castShadow = true; body.receiveShadow = true;
   g.add(body);
 
-  // Window rows
+  // Window rows — polygonOffset + thicker geometry prevents z-fighting
   const winMat = new THREE.MeshStandardMaterial({
     color: 0x1b2736, emissive: 0x2c3e55, emissiveIntensity: 0.15,
-    roughness: 0.25, metalness: 0.5
+    roughness: 0.25, metalness: 0.5,
+    polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -6
   });
-  const frameMat = new THREE.MeshStandardMaterial({ color: palette.trim, roughness: 0.8 });
+  const frameMat = new THREE.MeshStandardMaterial({
+    color: palette.trim, roughness: 0.8,
+    polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -3
+  });
   for (let side = 0; side < 4; side++) {
     const isX = side % 2 === 0;
     const sideW = isX ? w : d;
@@ -513,22 +553,17 @@ function makeBuilding(x, z, w, d, h, palette) {
     const rCount = Math.max(1, Math.floor((h - 1) / 1.9));
     for (let c = 0; c < cCount; c++) {
       for (let r = 0; r < rCount; r++) {
-        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.08), frameMat);
-        const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.06), winMat);
+        const frame = new THREE.Mesh(new THREE.BoxGeometry(0.95, 1.15, 0.16), frameMat);
+        const win = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1.0, 0.12), winMat);
         const u = (c + 0.5) / cCount - 0.5;
         const wy = 1.3 + r * 1.9;
         let px, pz, ry = 0;
-        if (side === 0) { px = u * w; pz =  d/2 + 0.04; }
-        if (side === 1) { px =  w/2 + 0.04; pz = u * d; ry = Math.PI/2; }
-        if (side === 2) { px = u * w; pz = -d/2 - 0.04; }
-        if (side === 3) { px = -w/2 - 0.04; pz = u * d; ry = Math.PI/2; }
+        if (side === 0) { px = u * w; pz =  d/2 + 0.10; }
+        if (side === 1) { px =  w/2 + 0.10; pz = u * d; ry = Math.PI/2; }
+        if (side === 2) { px = u * w; pz = -d/2 - 0.10; }
+        if (side === 3) { px = -w/2 - 0.10; pz = u * d; ry = Math.PI/2; }
         frame.position.set(px, wy, pz); frame.rotation.y = ry;
         win.position.set(px, wy, pz); win.rotation.y = ry;
-        if (ry !== 0) { // nudge win slightly outward
-          win.position.x += Math.sign(px) * 0.01;
-        } else {
-          win.position.z += Math.sign(pz) * 0.01;
-        }
         g.add(frame); g.add(win);
       }
     }
@@ -906,8 +941,10 @@ const clawMat = new THREE.MeshStandardMaterial({ color: 0xf0e3c6, roughness: 0.5
  *   +Y = UP
  *   +X = right
  */
+const bipedRot = new THREE.Group();
+cat.add(bipedRot);
 const body = new THREE.Group();
-cat.add(body);
+bipedRot.add(body);
 
 /* Torso — two spheres for a chubby silhouette */
 const chest = new THREE.Mesh(new THREE.SphereGeometry(0.52, 20, 14), furMat);
@@ -1173,7 +1210,7 @@ const tailSegs = [];
 
 /* Cat collision sized */
 const CAT_HEIGHT = 1.0;
-const CAT_RADIUS = 0.38;
+const CAT_RADIUS = 0.46;
 
 /* ================================================================
    COLLECTIBLES — multiple fish varieties + cute mice
@@ -1481,6 +1518,7 @@ window.addEventListener('keydown', e => {
   if (e.code === 'KeyV') requestTrick('windmill');
   if (e.code === 'KeyX') requestTrick('double');
   if (e.code === 'KeyZ') requestTrick('gainer');
+  if (e.code === 'KeyP') { state.biped = !state.biped; }
   keys[e.code] = true;
   state.lastInputTime = state.time;
 });
@@ -1536,9 +1574,11 @@ const state = {
   lastGroundY: 0,
   lastInputTime: 0,
   idleT: 0,
-  idleAction: 'none',     // 'sit', 'groom', 'blink', 'look', 'stretch'
+  idleAction: 'none',
   idleActionT: 0,
   idleActionDur: 0,
+  biped: false,
+  bipedAngle: 0,
 };
 
 /* Jump logic helpers */
@@ -1646,22 +1686,29 @@ function sampleGroundAt(x, z, maxY) {
   return best;
 }
 function resolveHoriz(next, curY) {
-  for (const s of SOLIDS) {
-    if (curY >= s.max.y - 0.1) continue;
-    if (curY + CAT_HEIGHT <= s.min.y) continue;
-    const nx = Math.max(s.min.x, Math.min(next.x, s.max.x));
-    const nz = Math.max(s.min.z, Math.min(next.z, s.max.z));
-    const dx = next.x - nx;
-    const dz = next.z - nz;
-    const d2 = dx*dx + dz*dz;
-    if (d2 < CAT_RADIUS * CAT_RADIUS) {
-      const d = Math.sqrt(d2) || 0.0001;
-      next.x = nx + (dx / d) * CAT_RADIUS;
-      next.z = nz + (dz / d) * CAT_RADIUS;
-      return { hit: true, nx: dx / d, nz: dz / d };
+  let result = { hit: false };
+  for (let iter = 0; iter < 4; iter++) {
+    let anyHit = false;
+    for (const s of SOLIDS) {
+      if (s.max.y < 0.3) continue;           // skip flat ground slabs
+      if (curY >= s.max.y - 0.05) continue;
+      if (curY + CAT_HEIGHT <= s.min.y) continue;
+      const cx = Math.max(s.min.x, Math.min(next.x, s.max.x));
+      const cz = Math.max(s.min.z, Math.min(next.z, s.max.z));
+      const dx = next.x - cx;
+      const dz = next.z - cz;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < CAT_RADIUS * CAT_RADIUS) {
+        const d = Math.sqrt(d2) || 0.0001;
+        next.x = cx + (dx / d) * CAT_RADIUS;
+        next.z = cz + (dz / d) * CAT_RADIUS;
+        result = { hit: true, nx: dx / d, nz: dz / d };
+        anyHit = true;
+      }
     }
+    if (!anyHit) break;
   }
-  return { hit: false };
+  return result;
 }
 function resolveTrees(next, curY) {
   for (const t of TREES) {
@@ -1898,6 +1945,35 @@ function catAnim(dt) {
   const blink = Math.min(blinkBase, blinkIdle);
   eyeL.scale.y = blink;
   eyeR.scale.y = blink;
+
+  /* ---- Bipedal mode ---- */
+  const bipedTarget = state.biped ? -Math.PI / 2 : 0;
+  state.bipedAngle += (bipedTarget - state.bipedAngle) * Math.min(1, 7 * dt);
+  bipedRot.rotation.x = state.bipedAngle;
+  // Lift pivot so back paws stay near ground when upright
+  bipedRot.position.y = Math.sin(-state.bipedAngle) * 0.52;
+
+  if (Math.abs(state.bipedAngle) > 0.05) {
+    const f  = Math.min(1, Math.abs(state.bipedAngle) / (Math.PI / 2));
+    const ba = -state.bipedAngle; // counter-rotation so legs hang down in world space
+    const bc = state.time * (4.5 + spd * 7);
+
+    // Back legs — standing / walking legs in upright pose
+    legs[2].rig.rotation.x   = ba + Math.sin(bc)           * 0.55 * f * (0.2 + spd);
+    legs[2].knee.rotation.x  = Math.max(0, Math.sin(bc  + 0.9)) * 1.1 * f;
+    legs[3].rig.rotation.x   = ba + Math.sin(bc + Math.PI) * 0.55 * f * (0.2 + spd);
+    legs[3].knee.rotation.x  = Math.max(0, Math.sin(bc  + Math.PI + 0.9)) * 1.1 * f;
+
+    // Front legs — cute T-rex arms, slightly animated
+    const aw = Math.sin(state.time * 2.8) * 0.12 * f;
+    legs[0].rig.rotation.x  = ba * 0.20 + aw;
+    legs[0].knee.rotation.x = 1.35 * f;
+    legs[1].rig.rotation.x  = ba * 0.20 - aw;
+    legs[1].knee.rotation.x = 1.35 * f;
+
+    // Head — counter-tilt so cat looks horizontally forward
+    headRig.rotation.x += ba * 0.62;
+  }
 }
 
 /* ================================================================
@@ -2378,6 +2454,14 @@ tick();
       e.preventDefault(); requestTrick(btn.dataset.trick);
     }, { passive: false });
   });
+
+  /* -- Biped toggle -- */
+  const bipedBtn = document.getElementById('bipedBtn');
+  bipedBtn.addEventListener('touchstart', e => {
+    e.preventDefault();
+    state.biped = !state.biped;
+    bipedBtn.classList.toggle('active', state.biped);
+  }, { passive: false });
 })();
 </script>
 
