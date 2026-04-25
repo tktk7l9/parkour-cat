@@ -149,7 +149,7 @@
     #startOverlay p { font-size: 12px; }
   }
 
-  /* Stage select buttons */
+  /* Stage select buttons (start screen) */
   .stage-btn {
     background: rgba(14,17,22,0.75);
     border: 1px solid rgba(255,255,255,0.18);
@@ -160,6 +160,53 @@
   }
   .stage-btn.active { background: rgba(244,165,80,0.32); border-color: #f4a550; color: #ffd98a; }
   .stage-btn:hover { border-color: rgba(255,255,255,0.35); }
+
+  /* In-game stage switch */
+  #stageToggleBtn {
+    position: fixed; top: 62px; right: 20px; z-index: 8;
+    display: none;
+    background: rgba(10,12,14,0.65);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px; color: #c8cdd3;
+    font-size: 12px; font-weight: 600;
+    padding: 7px 13px; cursor: pointer;
+    letter-spacing: 0.04em; transition: all 0.15s;
+  }
+  #stageToggleBtn.visible { display: block; }
+  #stageToggleBtn:hover { border-color: rgba(255,255,255,0.35); }
+  #stageSwitchBar {
+    position: fixed; top: 108px; right: 20px;
+    display: none; flex-direction: column; gap: 6px; z-index: 7; pointer-events: auto;
+    background: rgba(10,12,14,0.75);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.10);
+    border-radius: 12px; padding: 10px 12px;
+  }
+  #stageSwitchBar.visible { display: flex; }
+  #stageSwitchBar h5 {
+    margin: 0 0 4px; font-size: 10px; color: #9aa3ad;
+    letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500;
+  }
+  .ss-btn {
+    background: rgba(14,17,22,0.6);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px; color: #c8cdd3;
+    font-size: 13px; font-weight: 600;
+    padding: 7px 18px; cursor: pointer;
+    letter-spacing: 0.02em; transition: all 0.15s; text-align: left;
+  }
+  .ss-btn.active { background: rgba(244,165,80,0.32); border-color: #f4a550; color: #ffd98a; }
+  .ss-btn:hover:not(:disabled) { border-color: rgba(255,255,255,0.35); }
+  .ss-btn:disabled { opacity: 0.4; cursor: default; }
+
+  /* Warp flash overlay */
+  #warpFlash {
+    position: fixed; inset: 0; z-index: 20;
+    background: radial-gradient(ellipse at center, rgba(180,240,255,0.95), rgba(100,180,255,0.8));
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
 
   /* Camera drag — full screen above the control bar */
   #camZone {
@@ -290,6 +337,14 @@
 
 <div id="speedbar"><i></i></div>
 <div id="trickText"><span class="name"></span><span class="sub"></span></div>
+<div id="warpFlash"></div>
+<button id="stageToggleBtn">🗺 ステージ</button>
+<div id="stageSwitchBar">
+  <h5>ステージ変更 <kbd style="font-size:9px;padding:1px 4px;background:#1b1f24;border:1px solid #2a2f36;border-bottom-width:2px;border-radius:3px;color:#ddd;">Tab</kbd></h5>
+  <button class="ss-btn active" data-stage="london">🇬🇧 London</button>
+  <button class="ss-btn" data-stage="kyoto">🌸 Kyoto</button>
+  <button class="ss-btn" data-stage="guam">🌊 Guam</button>
+</div>
 <div id="crosshair"></div>
 
 <div id="lastTrickLog">
@@ -312,6 +367,8 @@
   <div><kbd>C</kbd>受け身 <kbd>Q</kbd>プレシジョン</div>
   <div style="margin-top:6px;color:#9aa3ad;font-size:10px;letter-spacing:0.1em;text-transform:uppercase">Mode</div>
   <div><kbd>P</kbd>二足歩行 ON/OFF</div>
+  <div style="margin-top:6px;color:#9aa3ad;font-size:10px;letter-spacing:0.1em;text-transform:uppercase">Stage</div>
+  <div><kbd>Tab</kbd> ステージ変更パネル</div>
 </div>
 
 <div id="mobileControls">
@@ -458,6 +515,32 @@ scene.add(WORLD);
 const SOLIDS = []; // {min, max} AABBs
 const TREES  = []; // {pos, radius, height}
 
+function addBoxSolidFromMesh(mesh) {
+  mesh.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(mesh);
+  SOLIDS.push({ min: b.min.clone(), max: b.max.clone() });
+}
+
+function addCrate(x, z, size, color = 0x7a5a3a) {
+  const m = new THREE.Mesh(
+    new THREE.BoxGeometry(size, size, size),
+    new THREE.MeshStandardMaterial({ color, roughness: 0.85 })
+  );
+  m.position.set(x, size / 2, z);
+  m.castShadow = true; m.receiveShadow = true;
+  const stripe = new THREE.Mesh(
+    new THREE.BoxGeometry(size * 0.98, 0.04, 0.08),
+    new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 0.9 })
+  );
+  stripe.position.y = size * 0.5;
+  m.add(stripe);
+  WORLD.add(m);
+  addBoxSolidFromMesh(m);
+}
+
+const clouds = [];
+
+function buildLondonWorld() {
 /* London ground — gray urban plane */
 {
   const groundGeo = new THREE.PlaneGeometry(500, 500, 60, 60);
@@ -548,12 +631,6 @@ const TREES  = []; // {pos, radius, height}
     stripe.position.set(0, 0.23, -50 + i * 1.2);
     WORLD.add(stripe);
   }
-}
-
-function addBoxSolidFromMesh(mesh) {
-  mesh.updateMatrixWorld(true);
-  const b = new THREE.Box3().setFromObject(mesh);
-  SOLIDS.push({ min: b.min.clone(), max: b.max.clone() });
 }
 
 /* Victorian / Georgian building */
@@ -818,24 +895,7 @@ function addPhoneBox(x, z) {
 }
 [[-14, -6], [14, 8], [-8, 38], [6, -42]].forEach(([x, z]) => addPhoneBox(x, z));
 
-/* Crates / stepping blocks */
-function addCrate(x, z, size, color = 0x7a5a3a) {
-  const m = new THREE.Mesh(
-    new THREE.BoxGeometry(size, size, size),
-    new THREE.MeshStandardMaterial({ color, roughness: 0.85 })
-  );
-  m.position.set(x, size / 2, z);
-  m.castShadow = true; m.receiveShadow = true;
-  // plank stripes on top
-  const stripe = new THREE.Mesh(
-    new THREE.BoxGeometry(size * 0.98, 0.04, 0.08),
-    new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 0.9 })
-  );
-  stripe.position.y = size * 0.5;
-  m.add(stripe);
-  WORLD.add(m);
-  addBoxSolidFromMesh(m);
-}
+/* London crates / stepping blocks */
 [
   [-8, -18, 1.4], [-6, -16, 1.0], [ 8, -16, 1.6], [ 6, -14, 1.0],
   [-10,   6, 1.2], [-12, 6, 1.6], [  10, 10, 1.4],
@@ -1022,7 +1082,6 @@ for (let i = 0; i < 16; i++) {
 }
 
 /* Clouds — London overcast, heavy flat-bottomed stratus */
-const clouds = [];
 for (let i = 0; i < 30; i++) {
   const c = new THREE.Group();
   const n = 4 + Math.floor(Math.random() * 4);
@@ -1073,6 +1132,8 @@ function addRail(x, z, len, h) {
 }
 addRail(0, 35, 10, 3.0);
 addRail(0, 48, 10, 3.0);
+} // end buildLondonWorld
+buildLondonWorld();
 
 /* Camera spring-arm obstacle avoidance — AABB ray check */
 function cameraAvoidObstacle(from, to) {
@@ -1110,14 +1171,14 @@ function cameraAvoidObstacle(from, to) {
 const cat = new THREE.Group();
 scene.add(cat);
 
-/* Anime cat palette */
-const FUR       = 0xfff4e0;   // cream vanilla base
-const FUR_PATCH = 0xe07830;   // orange calico patches
-const FUR_GRAY  = 0xd0ccc4;   // cool-gray areas
+/* Brown tabby calico palette — based on real cat */
+const FUR       = 0x7a6448;   // warm dark brown tabby base
+const FUR_PATCH = 0xb85a18;   // deep orange-brown calico patches
+const FUR_GRAY  = 0x5c4a38;   // dark brownish-gray areas
 const FUR_WHITE = 0xfffef8;   // pure white belly / socks
 const NOSE_COL  = 0xf09fb8;   // soft pink nose
 const EAR_INNER = 0xf8c0c8;   // warm pink ear inner
-const EYE_TEAL  = 0x38c8d8;   // bright anime teal iris
+const EYE_TEAL  = 0xd4920c;   // amber-golden iris (real cat eye color)
 
 const furMat      = new THREE.MeshStandardMaterial({ color: FUR,       roughness: 0.88 });
 const patchMat    = new THREE.MeshStandardMaterial({ color: FUR_PATCH, roughness: 0.88 });
@@ -1127,7 +1188,7 @@ const noseMat     = new THREE.MeshStandardMaterial({ color: NOSE_COL,  roughness
 const earInnerMat = new THREE.MeshStandardMaterial({ color: EAR_INNER, roughness: 0.75 });
 const eyeOutMat   = new THREE.MeshStandardMaterial({ color: 0x181820,  roughness: 0.25 });
 const eyeWhiteMat = new THREE.MeshStandardMaterial({ color: 0xfdf9f6,  roughness: 0.35 });
-const eyeMat      = new THREE.MeshStandardMaterial({ color: EYE_TEAL, emissive: 0x108898, emissiveIntensity: 0.4, roughness: 0.15 });
+const eyeMat      = new THREE.MeshStandardMaterial({ color: EYE_TEAL, emissive: 0x8a5000, emissiveIntensity: 0.35, roughness: 0.15 });
 const pupilMat    = new THREE.MeshStandardMaterial({ color: 0x0a0812,  roughness: 0.3 });
 
 const bipedRot = new THREE.Group();
@@ -1170,6 +1231,17 @@ belly.scale.set(0.82, 0.62, 1.80);
 belly.position.set(0, 0.46, 0.02);
 body.add(belly);
 
+/* Tabby back stripes */
+{
+  const bStripeMat = new THREE.MeshStandardMaterial({ color: 0x2e2018, roughness: 0.95 });
+  for (let i = 0; i < 4; i++) {
+    const bs = new THREE.Mesh(new THREE.SphereGeometry(0.10, 10, 6), bStripeMat);
+    bs.scale.set(2.4, 0.28, 0.5);
+    bs.position.set(0, 0.96, 0.3 - i * 0.22);
+    body.add(bs);
+  }
+}
+
 /* Neck + Head rig */
 const headRig = new THREE.Group();
 headRig.position.set(0, 1.02, 1.06);
@@ -1187,6 +1259,27 @@ headRig.add(animeHead);
   hp.scale.set(1.1, 0.4, 1.0);
   hp.position.set(0.08, 0.38, 0.0);
   headRig.add(hp);
+}
+
+/* Tabby stripe markings — dark stripes on forehead (M marking) */
+const stripeMat = new THREE.MeshStandardMaterial({ color: 0x2e2018, roughness: 0.95 });
+{
+  // Three forehead stripes (classic tabby M)
+  for (let i = 0; i < 3; i++) {
+    const stripe = new THREE.Mesh(new THREE.SphereGeometry(0.08, 10, 6), stripeMat);
+    stripe.scale.set(0.3, 0.6, 1.1);
+    stripe.position.set((i - 1) * 0.14, 0.36 - i * 0.04, 0.28);
+    headRig.add(stripe);
+  }
+  // Cheek stripe marks
+  for (const sx of [-1, 1]) {
+    for (let j = 0; j < 2; j++) {
+      const cs = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 6), stripeMat);
+      cs.scale.set(1.4, 0.25, 0.4);
+      cs.position.set(sx * 0.30, -0.02 - j * 0.08, 0.28);
+      headRig.add(cs);
+    }
+  }
 }
 
 /* Cheeks — extra puffy for anime look */
@@ -1288,7 +1381,7 @@ function mkEye(x) {
   g.add(pupil);
 
   // Gradient lower shade on iris
-  const shade = new THREE.Mesh(new THREE.SphereGeometry(0.08, 14, 10), new THREE.MeshStandardMaterial({ color: 0x1068a0, roughness: 0.1 }));
+  const shade = new THREE.Mesh(new THREE.SphereGeometry(0.08, 14, 10), new THREE.MeshStandardMaterial({ color: 0x7a4800, roughness: 0.1 }));
   shade.scale.set(1.1, 0.55, 0.22);
   shade.position.set(0, -0.048, 0.028);
   g.add(shade);
@@ -1374,7 +1467,41 @@ const legs = [
   mkLeg( 0.22, -0.52, false),
 ];
 
-/* Tail — fluffy anime tail, orange + cream segments */
+/* Fur system — LineSegments on body, head, tail */
+function buildFur(parentGroup, centerPos, radius, scaleX, scaleY, scaleZ, count, furColor, furLen) {
+  const positions = [];
+  for (let i = 0; i < count; i++) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi   = Math.acos(2 * Math.random() - 1);
+    const nx = Math.sin(phi) * Math.cos(theta);
+    const ny = Math.sin(phi) * Math.sin(theta);
+    const nz = Math.cos(phi);
+    // Surface point (accounting for ellipsoid scale)
+    const sx = centerPos.x + nx * radius * scaleX;
+    const sy = centerPos.y + ny * radius * scaleY;
+    const sz = centerPos.z + nz * radius * scaleZ;
+    // Fur tip: outward normal + slight random wobble
+    const len = furLen * (0.7 + Math.random() * 0.6);
+    const wobble = 0.04;
+    const tx = sx + (nx + (Math.random()-0.5)*wobble) * len;
+    const ty = sy + (ny + (Math.random()-0.5)*wobble) * len;
+    const tz = sz + (nz + (Math.random()-0.5)*wobble) * len;
+    positions.push(sx, sy, sz, tx, ty, tz);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  const mat = new THREE.LineBasicMaterial({ color: furColor, transparent: true, opacity: 0.55 });
+  parentGroup.add(new THREE.LineSegments(geo, mat));
+}
+// Body fur
+buildFur(body, new THREE.Vector3(0, 0.64, 0.46), 0.46, 1.0, 1.0, 1.20, 320, 0x9a7a56, 0.08);
+buildFur(body, new THREE.Vector3(0, 0.62, -0.42), 0.50, 1.0, 0.96, 1.18, 280, 0x9a7a56, 0.08);
+// Head fur
+buildFur(headRig, new THREE.Vector3(0, 0, 0), 0.54, 1.18, 1.06, 1.0, 260, 0x9a7a56, 0.07);
+// Belly (lighter, shorter)
+buildFur(body, new THREE.Vector3(0, 0.46, 0.02), 0.40, 0.82, 0.62, 1.80, 180, 0xf0ece4, 0.06);
+
+/* Tail — brown tabby banded tail */
 const tail = new THREE.Group();
 tail.position.set(0, 0.80, -0.88);
 body.add(tail);
@@ -1394,8 +1521,8 @@ const tailSegs = [];
     tailSegs.push(seg);
     parent = seg;
   }
-  // Fluffy tip
-  const tipMat = new THREE.MeshStandardMaterial({ color: 0xfff8f0, roughness: 0.95 });
+  // Fluffy tip — dark tabby tip like real cat
+  const tipMat = new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: 0.95 });
   const tip = new THREE.Mesh(new THREE.SphereGeometry(0.16, 14, 10), tipMat);
   tip.position.z = -0.10;
   tailSegs[tailSegs.length - 1].add(tip);
@@ -1428,6 +1555,108 @@ const tailSegs = [];
 
 const CAT_HEIGHT = 1.0;
 const CAT_RADIUS = 0.46;
+
+/* ================================================================
+   GUEST CATS — different cat types that wander the world
+================================================================ */
+const GUEST_CAT_TYPES = [
+  { name: '黒猫',   fur: 0x1a1a1a, patch: 0x2a2a2a, gray: 0x2a2a2a, white: 0xf0ede8, eye: 0x28d040, emissive: 0x106020 },
+  { name: '白猫',   fur: 0xfdfaf6, patch: 0xe8e8e8, gray: 0xd8d8d8, white: 0xffffff, eye: 0x4ab8e8, emissive: 0x1868a8 },
+  { name: '茶トラ', fur: 0xd07030, patch: 0xe08820, gray: 0xb06028, white: 0xfff8f0, eye: 0xd4a010, emissive: 0x8a5800 },
+  { name: 'グレー', fur: 0x8a8a8a, patch: 0x6a6a6a, gray: 0x707070, white: 0xf0eeec, eye: 0xc8a020, emissive: 0x8a6010 },
+  { name: '黒白',   fur: 0x151515, patch: 0x252525, gray: 0x1a1a1a, white: 0xfafafa, eye: 0xe8c040, emissive: 0xa08010 },
+];
+
+const guestCats = [];
+
+function buildGuestCat(type, x, z) {
+  const g = new THREE.Group();
+  const f  = new THREE.MeshStandardMaterial({ color: type.fur,   roughness: 0.88 });
+  const p  = new THREE.MeshStandardMaterial({ color: type.patch, roughness: 0.88 });
+  const wh = new THREE.MeshStandardMaterial({ color: type.white, roughness: 0.90 });
+  const ey = new THREE.MeshStandardMaterial({ color: type.eye, emissive: type.emissive, emissiveIntensity: 0.4, roughness: 0.15 });
+  const pk = new THREE.MeshStandardMaterial({ color: 0xf0a0b8, roughness: 0.75 });
+  const bd = new THREE.Group(); g.add(bd);
+
+  const chest = new THREE.Mesh(new THREE.SphereGeometry(0.38, 14, 10), f);
+  chest.scale.set(1.0, 1.0, 1.15); chest.position.set(0, 0.54, 0.36); bd.add(chest);
+  const rump = new THREE.Mesh(new THREE.SphereGeometry(0.40, 14, 10), f);
+  rump.scale.set(1.0, 0.94, 1.12); rump.position.set(0, 0.52, -0.32); bd.add(rump);
+  const belly = new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 8), wh);
+  belly.scale.set(0.80, 0.58, 1.70); belly.position.set(0, 0.38, 0.02); bd.add(belly);
+
+  // Head
+  const hr = new THREE.Group(); hr.position.set(0, 0.85, 0.84); bd.add(hr);
+  const hd = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 14), f);
+  hd.scale.set(1.12, 1.04, 1.0); hr.add(hd);
+  const mz = new THREE.Mesh(new THREE.SphereGeometry(0.15, 12, 8), wh);
+  mz.scale.set(1.0, 0.78, 0.80); mz.position.set(0, -0.08, 0.30); hr.add(mz);
+  // Eyes
+  for (const ex of [-0.14, 0.14]) {
+    const eo = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), new THREE.MeshStandardMaterial({ color: 0x181820 }));
+    eo.scale.set(1.1, 1.2, 0.35); eo.position.set(ex, 0.08, 0.33); hr.add(eo);
+    const ei = new THREE.Mesh(new THREE.SphereGeometry(0.10, 12, 8), ey);
+    ei.scale.set(1.0, 1.1, 0.28); ei.position.set(ex, 0.08, 0.345); hr.add(ei);
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(0.032, 6, 4), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+    sp.position.set(ex + (ex>0?0.032:-0.032), 0.115, 0.365); hr.add(sp);
+  }
+  // Ears
+  for (const ex of [-0.22, 0.22]) {
+    const er = new THREE.Group(); er.position.set(ex*0.9, 0.35, -0.04); er.rotation.z = -ex*0.18; hr.add(er);
+    const eouter = new THREE.Mesh(new THREE.ConeGeometry(0.17, 0.40, 12), f);
+    eouter.position.y = 0.20; er.add(eouter);
+    const einner = new THREE.Mesh(new THREE.ConeGeometry(0.10, 0.28, 10), pk);
+    einner.position.set(0, 0.15, 0.04); er.add(einner);
+  }
+  // Nose
+  const ns = new THREE.Mesh(new THREE.SphereGeometry(0.028, 6, 4), new THREE.MeshStandardMaterial({ color: 0xf09fb8 }));
+  ns.position.set(0, -0.02, 0.40); hr.add(ns);
+  // Tail
+  const tl = new THREE.Group(); tl.position.set(0, 0.62, -0.68); bd.add(tl);
+  let tp = tl;
+  for (let i = 0; i < 7; i++) {
+    const ts = new THREE.Group(); ts.position.z = -0.10; tp.add(ts);
+    const tc = (i % 2 === 0) ? p : f;
+    const tsm = new THREE.Mesh(new THREE.SphereGeometry(0.09 - i*0.006, 8, 6), tc);
+    tsm.position.z = -0.04; ts.add(tsm);
+    tp = ts;
+  }
+  // Legs (simplified)
+  for (const [lx, lz] of [[-0.18, 0.42], [0.18, 0.42], [-0.18, -0.38], [0.18, -0.38]]) {
+    const lr = new THREE.Group(); lr.position.set(lx, 0.42, lz); bd.add(lr);
+    lr.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.065, 0.50, 8), f), { position: { y: -0.25 } }));
+    const pw = new THREE.Mesh(new THREE.SphereGeometry(0.085, 10, 7), wh);
+    pw.scale.set(1.0, 0.6, 1.05); pw.position.set(0, -0.52, 0); lr.add(pw);
+  }
+
+  g.position.set(x, 0, z);
+  scene.add(g);
+
+  const wanderAngle = Math.random() * Math.PI * 2;
+  return {
+    g, bd, hr,
+    pos: new THREE.Vector3(x, 0, z),
+    facing: wanderAngle,
+    wanderT: 2 + Math.random() * 4,
+    wanderAngle,
+    idleT: Math.random() * 5,
+    sitting: false,
+    bobT: Math.random() * Math.PI * 2,
+    type,
+  };
+}
+
+function spawnGuestCats() {
+  for (const gc of guestCats) scene.remove(gc.g);
+  guestCats.length = 0;
+  const count = 2 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    const t = GUEST_CAT_TYPES[Math.floor(Math.random() * GUEST_CAT_TYPES.length)];
+    const a = Math.random() * Math.PI * 2;
+    const r = 8 + Math.random() * 25;
+    guestCats.push(buildGuestCat(t, Math.cos(a) * r, Math.sin(a) * r));
+  }
+}
 
 /* ================================================================
    COLLECTIBLES — multiple fish varieties + cute mice
@@ -1796,6 +2025,9 @@ const state = {
   idleActionDur: 0,
   biped: false,
   bipedAngle: 0,
+  warpT: 0,
+  warpStage: null,
+  warpSwitched: false,
 };
 
 /* Jump logic helpers */
@@ -2056,7 +2288,8 @@ function catAnim(dt) {
         const phase = Math.min(1, ap * 2.0);
         const rollAngle = eio(phase) * Math.PI; // 0 → π (on back)
         body.rotation.z = rollAngle;
-        body.position.y = -0.1 * Math.sin(rollAngle);
+        // Raise body to prevent ground penetration when rolled onto back
+        body.position.y = (1 - Math.cos(rollAngle)) * 0.68;
         if (phase > 0.5) {
           // Legs go up when on back
           const legUp = eio(Math.min(1, (phase - 0.5) * 2));
@@ -2578,6 +2811,58 @@ function updateParticles(dt) {
 }
 
 /* ================================================================
+   WARP / STAGE SWITCH SYSTEM
+================================================================ */
+const WARP_DUR = 1.4;
+const warpFlashEl = document.getElementById('warpFlash');
+const stageSwitchBar = document.getElementById('stageSwitchBar');
+const stageToggleBtn = document.getElementById('stageToggleBtn');
+let stageSwitchOpen = false;
+
+function setInGameStageActive(stage) {
+  document.querySelectorAll('.ss-btn').forEach(b => b.classList.toggle('active', b.dataset.stage === stage));
+  document.querySelectorAll('.stage-btn').forEach(b => b.classList.toggle('active', b.dataset.stage === stage));
+}
+
+function triggerWarp(newStage) {
+  if (!running || state.warpT > 0 || newStage === selectedStage) return;
+  state.warpT = WARP_DUR;
+  state.warpStage = newStage;
+  state.warpSwitched = false;
+  state.vel.set(0, 0, 0);
+  stageSwitchOpen = false;
+  stageSwitchBar.classList.remove('visible');
+}
+
+function updateGuestCats(dt) {
+  for (const gc of guestCats) {
+    gc.bobT += dt * 2.5;
+    gc.idleT -= dt;
+    gc.wanderT -= dt;
+    const isIdle = gc.idleT > 0;
+    if (!isIdle) {
+      // Move
+      gc.facing += (Math.random() - 0.5) * 0.04;
+      const spd = 1.5;
+      gc.pos.x += Math.sin(gc.facing) * spd * dt;
+      gc.pos.z += Math.cos(gc.facing) * spd * dt;
+      // Gentle walk bob
+      gc.bd.position.y = Math.abs(Math.sin(gc.bobT * 1.8)) * 0.04;
+      gc.g.rotation.y = gc.facing;
+    } else {
+      // Sitting idle
+      gc.bd.position.y = 0;
+      gc.bd.rotation.x = Math.sin(gc.bobT * 0.4) * 0.02;
+    }
+    if (gc.wanderT <= 0) {
+      gc.wanderT = 3 + Math.random() * 5;
+      gc.idleT = Math.random() < 0.4 ? 2 + Math.random() * 3 : -1;
+    }
+    gc.g.position.set(gc.pos.x, 0, gc.pos.z);
+  }
+}
+
+/* ================================================================
    MAIN LOOP
 ================================================================ */
 let running = false;
@@ -2602,7 +2887,29 @@ document.getElementById('startBtn').addEventListener('click', () => {
   }
   running = true;
   initAudio();
+  spawnGuestCats();
+  stageSwitchBar.classList.add('visible');
+  stageToggleBtn.classList.add('visible');
+  setInGameStageActive(selectedStage);
   renderer.domElement.requestPointerLock?.();
+});
+
+// In-game stage switch buttons
+document.querySelectorAll('.ss-btn').forEach(btn => {
+  btn.addEventListener('click', () => triggerWarp(btn.dataset.stage));
+});
+
+// Stage panel toggle
+stageToggleBtn.addEventListener('click', () => {
+  stageSwitchOpen = !stageSwitchOpen;
+  stageSwitchBar.classList.toggle('visible', stageSwitchOpen);
+});
+
+// Tab key toggles stage panel, escape closes it
+document.addEventListener('keydown', e => {
+  if (!running) return;
+  if (e.code === 'Tab') { e.preventDefault(); stageSwitchOpen = !stageSwitchOpen; stageSwitchBar.classList.toggle('visible', stageSwitchOpen); }
+  if (e.code === 'Escape') { stageSwitchOpen = false; stageSwitchBar.classList.remove('visible'); }
 });
 
 const forward = new THREE.Vector3();
@@ -2616,6 +2923,51 @@ function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(0.033, clock.getDelta());
   if (!running) { renderer.render(scene, camera); return; }
+
+  /* ---- Warp animation ---- */
+  if (state.warpT > 0) {
+    state.warpT -= dt;
+    const p = 1 - state.warpT / WARP_DUR; // 0 → 1 over warp duration
+    if (p < 0.5) {
+      // Phase 1: spin up + shrink
+      const spinP = p / 0.5;
+      cat.rotation.y = spinP * Math.PI * 6;
+      cat.scale.setScalar(1 - spinP * 0.85);
+      warpFlashEl.style.opacity = String(spinP * 0.85);
+    } else if (!state.warpSwitched) {
+      // Midpoint: switch stage
+      state.warpSwitched = true;
+      const ns = state.warpStage;
+      clearWorld();
+      if (ns === 'london') buildLondonWorld();
+      else if (ns === 'kyoto') buildKyotoWorld();
+      else if (ns === 'guam') buildGuamWorld();
+      updateSkyForStage(ns);
+      selectedStage = ns;
+      state.pos.set(0, 3, 0);
+      state.vel.set(0, 2, 0);
+      setInGameStageActive(ns);
+      spawnGuestCats();
+      if (typeof scheduleBGM === 'function') scheduleBGM(ns);
+    } else {
+      // Phase 2: grow back
+      const growP = (p - 0.5) / 0.5;
+      cat.rotation.y = (1 - growP) * Math.PI * 3;
+      cat.scale.setScalar(0.15 + growP * 0.85);
+      warpFlashEl.style.opacity = String((1 - growP) * 0.85);
+    }
+    if (state.warpT <= 0) {
+      cat.rotation.y = 0;
+      cat.scale.setScalar(1);
+      warpFlashEl.style.opacity = '0';
+      state.warpT = 0;
+      state.warpStage = null;
+    }
+    renderer.render(scene, camera);
+    return;
+  }
+
+  updateGuestCats(dt);
 
   state.time += dt;
 
