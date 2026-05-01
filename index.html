@@ -428,13 +428,16 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
 </script>
 
 <script type="module">
 import * as THREE from 'three';
+import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { MTLLoader } from 'three/addons/loaders/MTLLoader.js';
 
 let selectedStage = 'london';
 
@@ -1551,6 +1554,38 @@ const tailSegs = [];
   bell.scale.y = 1.18;
   bell.position.set(0, 0.56, 0.67);
   body.add(bell);
+}
+
+/* Load OBJ cat model — replaces procedural cat geometry */
+{
+  const mtlLoader = new MTLLoader();
+  mtlLoader.setPath('assets/cat/');
+  mtlLoader.load('12221_Cat_v1_l3.mtl', (materials) => {
+    materials.preload();
+    const objLoader = new OBJLoader();
+    objLoader.setMaterials(materials);
+    objLoader.setPath('assets/cat/');
+    objLoader.load('12221_Cat_v1_l3.obj', (obj) => {
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = box.getSize(new THREE.Vector3());
+      // OBJ is Z-up: rotation(+π/2, π, π) maps OBJ-Z→worldY, -OBJ-Y→worldZ
+      const scale = 1.3 / size.z;
+      obj.scale.setScalar(scale);
+      obj.rotation.set(Math.PI / 2, Math.PI, Math.PI);
+      obj.position.set(
+        0,
+        -box.min.z * scale,
+        (box.min.y + box.max.y) * 0.5 * scale
+      );
+      obj.traverse(child => {
+        if (child.isMesh) child.castShadow = true;
+      });
+      body.traverse(child => {
+        if (child.isMesh || child.isLine) child.visible = false;
+      });
+      body.add(obj);
+    });
+  });
 }
 
 const CAT_HEIGHT = 1.0;
